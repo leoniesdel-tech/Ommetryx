@@ -199,7 +199,7 @@ export function ladeKonfiguration(excelRoh: unknown, ergaenzungenRoh: unknown): 
       if (!art) fehler("unbekannte_artikelart", `Unbekannte Artikelart "${name}"`);
       return art;
     },
-    artikelarten: Object.keys(erg.artikelarten),
+    artikelarten: Object.keys(erg.artikelarten).sort(),
     bundRegel: (regel, bund) => regel.nach_bund?.[bund],
   };
 

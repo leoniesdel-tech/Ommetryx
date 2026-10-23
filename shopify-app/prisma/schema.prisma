@@ -1,34 +1,175 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Datenbank-Schema von Ommetryx (PostgreSQL).
+// Drei getrennte Bereiche (Datenschutz, CLAUDE.md Abschnitt 9):
+//   app      – Shops, Konfiguration, später Artikel und Empfehlungen (keine Körpermaße)
+//   identity – später E-Mail, Login, Einwilligungen
+//   body     – später Körpermaße, nur über pseudonym_id
+// Mehr dazu: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["app", "identity", "body"]
 }
 
+// Shopify-Anmeldung des Händlers (aus dem Template).
 model Session {
-  id            String    @id
-  shop          String
-  state         String
-  isOnline      Boolean   @default(false)
-  scope         String?
-  expires       DateTime?
-  accessToken   String
-  userId        BigInt?
-  firstName     String?
-  lastName      String?
-  email         String?
-  accountOwner  Boolean   @default(false)
-  locale        String?
-  collaborator  Boolean?  @default(false)
-  emailVerified Boolean?  @default(false)
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
   refreshToken        String?
   refreshTokenExpires DateTime?
+
+  @@schema("app")
+}
+
+// ---------------------------------------------------------------------------
+// Konfiguration der Empfehlungslogik.
+// Je Blatt der Excel-Datei eine Tabelle, alles an eine Version gebunden („v3“).
+// Startwerte: npm run db:startwerte (liest packages/empfehlung/konfiguration/*.json).
+// ---------------------------------------------------------------------------
+
+model KonfigVersion {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  aktiv      Boolean  @default(false)
+  quelle     String
+  erstelltAm DateTime @default(now()) @map("erstellt_am")
+
+  bereiche          KonfigBereich[]
+  mindest           KonfigMindest[]
+  dehnungsklassen   KonfigDehnungsklasse[]
+  dehnungskorrektur KonfigDehnungskorrektur[]
+  gewichte          KonfigGewicht[]
+  parameter         KonfigParameter[]
+  ergaenzung        KonfigErgaenzung?
+
+  @@map("konfig_version")
+  @@schema("app")
+}
+
+model KonfigBereich {
+  id                     Int     @id @default(autoincrement())
+  versionId              Int     @map("version_id")
+  kategorieId            String  @map("kategorie_id")
+  kategorie              String
+  messpunkt              String
+  passform               String
+  unter                  Float
+  ober                   Float
+  einheit                String
+  referenzDehnungsklasse Int     @map("referenz_dehnungsklasse")
+  vertrauen              String?
+  quelle                 String?
+
+  version KonfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, kategorieId, messpunkt, passform])
+  @@map("konfig_bereich")
+  @@schema("app")
+}
+
+model KonfigMindest {
+  id               Int     @id @default(autoincrement())
+  versionId        Int     @map("version_id")
+  kategorieId      String  @map("kategorie_id")
+  messpunkt        String
+  mindestCmKlasse0 Float   @map("mindest_cm_klasse0")
+  hinweis          String?
+  quelle           String?
+  vertrauen        String?
+
+  version KonfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, kategorieId, messpunkt])
+  @@map("konfig_mindest")
+  @@schema("app")
+}
+
+model KonfigDehnungsklasse {
+  id         Int     @id @default(autoincrement())
+  versionId  Int     @map("version_id")
+  klasse     Int
+  name       String
+  dehnungVon Float   @map("dehnung_von")
+  dehnungBis Float?  @map("dehnung_bis")
+  beispiele  String?
+
+  version KonfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, klasse])
+  @@map("konfig_dehnungsklasse")
+  @@schema("app")
+}
+
+model KonfigDehnungskorrektur {
+  id         Int    @id @default(autoincrement())
+  versionId  Int    @map("version_id")
+  klasse     Int
+  koerpernah Float?
+  regulaer   Float?
+  locker     Float?
+  oversized  Float?
+
+  version KonfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, klasse])
+  @@map("konfig_dehnungskorrektur")
+  @@schema("app")
+}
+
+model KonfigGewicht {
+  id           Int    @id @default(autoincrement())
+  versionId    Int    @map("version_id")
+  kategorie    String
+  brust        Float?
+  taille       Float?
+  huefte       Float?
+  oberschenkel Float?
+  oberarm      Float?
+
+  version KonfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, kategorie])
+  @@map("konfig_gewicht")
+  @@schema("app")
+}
+
+model KonfigParameter {
+  id         Int    @id @default(autoincrement())
+  versionId  Int    @map("version_id")
+  schluessel String
+  wert       Float
+
+  version KonfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, schluessel])
+  @@map("konfig_parameter")
+  @@schema("app")
+}
+
+// Von Hand gepflegte Ergänzungen (Artikelarten, Zusatzgewichte), als JSON.
+model KonfigErgaenzung {
+  versionId Int  @id @map("version_id")
+  daten     Json
+
+  version KonfigVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@map("konfig_ergaenzung")
+  @@schema("app")
 }

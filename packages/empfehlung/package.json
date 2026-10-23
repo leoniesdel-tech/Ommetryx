@@ -5,7 +5,8 @@
   "description": "Empfehlungslogik von Ommetryx (v3): Kleidungsmaße + Körpermaße → empfohlene Größe. Ohne Shopify, ohne Datenbank.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./konfiguration/*": "./konfiguration/*"
   },
   "scripts": {
     "test": "vitest run",

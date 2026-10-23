@@ -199,7 +199,9 @@ Befehle (im Ordner `packages/empfehlung`):
 | `npm run konfig` | Excel-Datei → `konfiguration-v3.json` (nach jeder Excel-Änderung) |
 | `npm run beispiel` | Tabelle wie das Excel-Rechenbeispiel, Eingaben in `beispiele/bluse.json` |
 
-**Shopify-App** `shopify-app/` (Etappe 3, angelegt 23.10.): offizielles React-Router-Template, TypeScript, React Router 7.18.2 (gepinnt), Node ≥ 22.12. Datenbank noch SQLite aus dem Template (nur Sessions), Umstellung auf PostgreSQL in Etappe 4. Scopes noch die Demo-Scopes des Templates (`write_products`, `write_metaobjects`, `write_metaobject_definitions`), vor dem Pilot auf das Nötigste kürzen.
+**Shopify-App** `shopify-app/` (Etappe 3, angelegt 23.10.): offizielles React-Router-Template, TypeScript, React Router 7.18.2 (gepinnt), Node ≥ 22.12. Bindet das Empfehlungsmodul als `@ommetryx/empfehlung` ein (`file:../packages/empfehlung`, `allowImportingTsExtensions` in tsconfig).
+
+**Datenbank** (Etappe 4, 23.10.): PostgreSQL 18 lokal installiert (Windows-Dienst, Port 5432). Datenbank `ommetryx`, Benutzer `ommetryx_dev` (Passwort nur in `shopify-app/.env`, Vorlage `.env.example`), Bereiche `app`, `identity`, `body` (letztere noch leer). Prisma 6.19 mit `schemas = [...]`, jedes Modell mit `@@schema`. Konfiguration in Tabellen `konfig_*`, an `konfig_version` gebunden (aktiv: v3). Laden: `app/models/konfiguration.server.ts` → `ladeAktiveKonfiguration(db)`. Achtung: JSONB sortiert Schlüssel um, nie auf die Reihenfolge von JSON-Feldern verlassen. Das Superuser-Passwort `postgres` kennt nur Leonie. Scopes noch die Demo-Scopes des Templates (`write_products`, `write_metaobjects`, `write_metaobject_definitions`), vor dem Pilot auf das Nötigste kürzen.
 - Partner-Organisation „Ommetryx“, App „Ommetryx“ (Client-ID steht in `shopify.app.toml`, kein Geheimnis).
 - Entwicklungs-Shop: `ommetryx-test.myshopify.com` (Land DE, Demo-Daten, Admin: https://admin.shopify.com/store/ommetryx-test).
 - `shopify-app/CLAUDE.md` und `AGENTS.md` stammen aus dem Template.
@@ -207,6 +209,11 @@ Befehle (im Ordner `packages/empfehlung`):
 | Befehl | Was er tut |
 |---|---|
 | `shopify app dev --path C:/Projekte/ommetryx/shopify-app` | App lokal starten, Tunnel zum Test-Shop. Taste `p` öffnet die Vorschau, `q` beendet. |
+| `npm test` (in `shopify-app`) | Tests der App, u. a. Konfiguration aus der Datenbank (braucht laufendes PostgreSQL) |
+| `npm run typecheck` | TypeScript-Prüfung der App |
+| `npm run db:migrate` | Datenbank-Änderung aus `prisma/schema.prisma` als Migration anlegen und anwenden. Vorher die App stoppen (Windows sperrt Dateien). |
+| `npm run db:startwerte` | Konfiguration aus `packages/empfehlung/konfiguration/` in die Datenbank (ersetzt die Version, setzt sie aktiv) |
+| `npm run db:studio` | Prisma Studio: Datenbank im Browser ansehen (http://localhost:5555) |
 
 **Wichtig zur Umgebung:** Befehle, die Leonies Anmeldungen brauchen (`shopify …`, `git push`), immer mit `run_in_terminal` in ihrem Terminal starten. Globale Installationen über Bash (z. B. `npm install -g`) landen in einer abgeschotteten Umgebung und sind in Leonies Terminal nicht sichtbar. Die Shopify CLI ist deshalb in ihrem Terminal installiert. Das Terminal-Panel erlaubt nur Startordner innerhalb der Sitzung, daher `--path` bzw. `git -C` statt `cd`. Leonie möchte möglichst wenig selbst im Terminal tun: Links mit `Start-Process` in ihrem Browser öffnen, Fragen im Terminal möglichst über Flags vorab beantworten.
 

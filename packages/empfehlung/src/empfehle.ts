@@ -6,7 +6,7 @@ import { dehnungskorrektur, mindestMehrweite } from "./dehnung.ts";
 import type { Artikelart, Konfiguration, Zeilenwahl } from "./konfiguration.ts";
 import { groessensprung } from "./sprung.ts";
 import { strafe, strafeVergleich } from "./strafe.ts";
-import { EmpfehlungsFehler } from "./typen.ts";
+import { EmpfehlungsFehler, MESSPUNKTE } from "./typen.ts";
 import type { Anfrage, Artikel, Ausschlussgrund, Ergebnis, GroessenErgebnis, Messpunkt, Status, ZonenErgebnis } from "./typen.ts";
 
 export function empfehle(anfrage: Anfrage, k: Konfiguration): Ergebnis {
@@ -89,10 +89,15 @@ function pruefePflichtmasse(anfrage: Anfrage, art: Artikelart) {
   }
 }
 
-/** Tabellenzeilen je Messpunkt, nach Varianten (tailliert, ärmellos, Bund) aufgelöst. */
+/**
+ * Tabellenzeilen je Messpunkt, nach Varianten (tailliert, ärmellos, Bund) aufgelöst.
+ * Feste Reihenfolge aus MESSPUNKTE, denn die Datenbank (JSONB) liefert Schlüssel umsortiert.
+ */
 function waehleZeilen(art: Artikelart, artikel: Artikel): [Messpunkt, Zeilenwahl][] {
   const ergebnis: [Messpunkt, Zeilenwahl][] = [];
-  for (const [mp, regel] of Object.entries(art.messpunkte) as [Messpunkt, NonNullable<Artikelart["messpunkte"][Messpunkt]>][]) {
+  for (const mp of MESSPUNKTE) {
+    const regel = art.messpunkte[mp];
+    if (!regel) continue;
     let wahl: Zeilenwahl | null = regel;
     if (artikel.tailliert && regel.wenn_tailliert) wahl = regel.wenn_tailliert;
     if (artikel.aermel_typ === "ohne" && regel.wenn_aermellos) wahl = regel.wenn_aermellos;
