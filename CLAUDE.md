@@ -189,7 +189,7 @@ Noch keine – wird ergänzt, sobald das App-Grundgerüst steht (Start, Tests, D
 
 **Organisation**
 - Code liegt in **`C:\Projekte\ommetryx`** (eigener Ordner ohne Umlaut, eigene Kopie dieser CLAUDE.md). Unterlagen bleiben im Gründungssemester-Ordner.
-- **Privates GitHub-Repo.** Leonie legt das GitHub-Konto an (Claude führt durch).
+- **Privates GitHub-Repo:** https://github.com/leoniesdel-tech/Ommetryx (Konto `leoniesdel-tech`, Branch `main`). `git push` klappt nur in Leonies Terminal (dort liegt die GitHub-Anmeldung), deshalb mit `run_in_terminal` starten, nicht über Bash.
 - **Leonie** legt Shopify-Partner-Konto und Entwicklungs-Shop an (Claude führt durch).
 - Domain für „Mein Ommetryx“ gibt es noch nicht. Bis Etappe 7 reicht die Render-Adresse, die Domain sollte bis Mitte Dezember da sein.
 - Bauen in dieser Reihenfolge: Werkzeuge → **Empfehlungsmodul mit Vitest** → Template im Dev-Shop → Postgres/Prisma → Erfassung → Widget-Minimum (Meilenstein: Empfehlung für von Hand eingetragenen Artikel) → Einwilligung/Login/Mein Ommetryx → Ergebnis komplett → Händler-UI → Webhooks, Pricing, Lernen, Review.
