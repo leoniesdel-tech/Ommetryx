@@ -163,6 +163,131 @@ model KonfigParameter {
   @@schema("app")
 }
 
+// ---------------------------------------------------------------------------
+// Shops und vermessene Artikel (Kleidungsmaße, keine Personendaten).
+// Datenformat wie Schnittstellen-Doku v3 Abschnitt 8. Umfänge in cm (Flachmaß × 2).
+// ---------------------------------------------------------------------------
+
+model Shop {
+  id              Int       @id @default(autoincrement())
+  domain          String    @unique
+  installiertAm   DateTime  @default(now()) @map("installiert_am")
+  deinstalliertAm DateTime? @map("deinstalliert_am")
+
+  artikel Artikel[]
+
+  @@map("shop")
+  @@schema("app")
+}
+
+model Artikel {
+  id                      Int      @id @default(autoincrement())
+  shopId                  Int      @map("shop_id")
+  shopifyProduktId        String   @map("shopify_produkt_id")
+  titel                   String
+  artikelart              String
+  schnitt                 String
+  schnittQuelle           String   @map("schnitt_quelle")
+  materialDehnungProzent  Float    @map("material_dehnung_prozent")
+  materialZusammensetzung String?  @map("material_zusammensetzung")
+  tailliert               Boolean  @default(false)
+  bundTyp                 String?  @map("bund_typ")
+  aermelTyp               String?  @map("aermel_typ")
+  messhoeheBrustCm        Float    @default(2.5) @map("messhoehe_brust_cm")
+  /// "entwurf" oder "vermessen"
+  status                  String   @default("entwurf")
+  aktualisiertAm          DateTime @updatedAt @map("aktualisiert_am")
+
+  shop         Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  groessen     ArtikelGroesse[]
+  vermessungen Vermessung[]
+
+  @@unique([shopId, shopifyProduktId])
+  @@map("artikel")
+  @@schema("app")
+}
+
+model ArtikelGroesse {
+  id                Int     @id @default(autoincrement())
+  artikelId         Int     @map("artikel_id")
+  groesse           String
+  shopifyVarianteId String? @map("shopify_variante_id")
+  reihenfolge       Int
+  brust             Float?
+  taille            Float?
+  huefte            Float?
+  oberschenkel      Float?
+  oberarm           Float?
+  schulter          Float?
+  armlaenge         Float?
+  gesamtlaenge      Float?
+
+  artikel Artikel @relation(fields: [artikelId], references: [id], onDelete: Cascade)
+
+  @@unique([artikelId, groesse])
+  @@map("artikel_groesse")
+  @@schema("app")
+}
+
+model Vermessung {
+  id             Int      @id @default(autoincrement())
+  artikelId      Int      @map("artikel_id")
+  teamMitgliedId Int?     @map("team_mitglied_id")
+  /// "hand" oder später "programm"
+  quelle         String
+  erfasstAm      DateTime @default(now()) @map("erfasst_am")
+
+  artikel      Artikel       @relation(fields: [artikelId], references: [id], onDelete: Cascade)
+  teamMitglied TeamMitglied? @relation(fields: [teamMitgliedId], references: [id], onDelete: SetNull)
+
+  @@map("vermessung")
+  @@schema("app")
+}
+
+// ---------------------------------------------------------------------------
+// Team-Login für den internen Bereich (/intern): Passwort + Zwei-Faktor-Code (TOTP).
+// Kein öffentliches Registrieren. Einladung per `npm run team:einladen`.
+// ---------------------------------------------------------------------------
+
+model TeamMitglied {
+  id                    Int       @id @default(autoincrement())
+  email                 String    @unique
+  name                  String
+  /// scrypt-Hash, nie Klartext
+  passwortHash          String?   @map("passwort_hash")
+  /// TOTP-Geheimnis, verschlüsselt mit INTERN_SCHLUESSEL (AES-256-GCM)
+  totpGeheimnis         String?   @map("totp_geheimnis")
+  totpAktiv             Boolean   @default(false) @map("totp_aktiv")
+  /// Letzter verwendeter Zeitschritt, damit ein Code nicht zweimal gilt
+  letzterTotpSchritt    Int?      @map("letzter_totp_schritt")
+  fehlversuche          Int       @default(0)
+  gesperrtBis           DateTime? @map("gesperrt_bis")
+  einrichtungTokenHash  String?   @unique @map("einrichtung_token_hash")
+  einrichtungGueltigBis DateTime? @map("einrichtung_gueltig_bis")
+  erstelltAm            DateTime  @default(now()) @map("erstellt_am")
+  letzteAnmeldung       DateTime? @map("letzte_anmeldung")
+
+  sitzungen    TeamSitzung[]
+  vermessungen Vermessung[]
+
+  @@map("team_mitglied")
+  @@schema("app")
+}
+
+model TeamSitzung {
+  id         Int      @id @default(autoincrement())
+  /// SHA-256 des Cookie-Werts, der Wert selbst wird nie gespeichert
+  tokenHash  String   @unique @map("token_hash")
+  mitgliedId Int      @map("mitglied_id")
+  gueltigBis DateTime @map("gueltig_bis")
+  erstelltAm DateTime @default(now()) @map("erstellt_am")
+
+  mitglied TeamMitglied @relation(fields: [mitgliedId], references: [id], onDelete: Cascade)
+
+  @@map("team_sitzung")
+  @@schema("app")
+}
+
 // Von Hand gepflegte Ergänzungen (Artikelarten, Zusatzgewichte), als JSON.
 model KonfigErgaenzung {
   versionId Int  @id @map("version_id")

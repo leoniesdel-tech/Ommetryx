@@ -1,0 +1,247 @@
+/* Interner Bereich – Design „Warm Minimal“ (CLAUDE.md Abschnitt 10), schlicht gehalten. */
+
+.intern {
+  --linen: #f6f4ef;
+  --graphit: #1e2326;
+  --text-sekundaer: #4f575c;
+  --ink: #0c3a4a;
+  --petrol-tief: #15788c;
+  --linie-stark: #7d868a;
+  --linie: #d9d4cb;
+  --fehler: #b3261e;
+  --hinweis: #b8492a;
+
+  min-height: 100vh;
+  background: var(--linen);
+  color: var(--graphit);
+  font-family: "Sora", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.intern * {
+  box-sizing: border-box;
+}
+
+.intern-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--linie);
+}
+
+.intern-kopf strong {
+  font-weight: 600;
+}
+
+.intern-inhalt {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.intern-schmal {
+  max-width: 460px;
+  margin: 40px auto;
+  padding: 24px;
+}
+
+.intern h1 {
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.intern h2 {
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 32px 0 12px;
+}
+
+.intern a {
+  color: var(--petrol-tief);
+}
+
+.karte {
+  background: #fff;
+  border: 1px solid var(--linie);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.feld label,
+.feld .beschriftung {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.feld .erklaerung {
+  font-size: 14px;
+  color: var(--text-sekundaer);
+}
+
+.intern input,
+.intern select {
+  height: 48px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--graphit);
+  background: #fff;
+  border: 1px solid var(--linie-stark);
+  border-radius: 12px;
+}
+
+.intern input[type="checkbox"] {
+  height: 20px;
+  width: 20px;
+}
+
+.intern input:focus-visible,
+.intern select:focus-visible,
+.intern button:focus-visible,
+.intern a:focus-visible {
+  outline: 2px solid var(--petrol-tief);
+  outline-offset: 2px;
+}
+
+.intern input[aria-invalid="true"] {
+  border: 2px solid var(--fehler);
+}
+
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 20px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ink);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.knopf-zweit {
+  min-height: 44px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--linie-stark);
+}
+
+.zeile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.zeile > .feld {
+  flex: 1 1 200px;
+}
+
+.fehler {
+  color: var(--fehler);
+  font-size: 14px;
+}
+
+.hinweis {
+  color: var(--hinweis);
+  font-size: 14px;
+}
+
+.meldung {
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--linie);
+  background: #fff;
+}
+
+.meldung-fehler {
+  border: 2px solid var(--fehler);
+}
+
+.meldung-ok {
+  border: 2px solid var(--petrol-tief);
+}
+
+.tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.tabelle th,
+.tabelle td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--linie);
+  vertical-align: top;
+}
+
+.tabelle th {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tabelle input {
+  width: 96px;
+}
+
+.tabelle .umfang {
+  display: block;
+  font-size: 12px;
+  color: var(--text-sekundaer);
+}
+
+.tabelle-rahmen {
+  overflow-x: auto;
+  border: 1px solid var(--linie);
+  border-radius: 16px;
+}
+
+.qr svg {
+  width: 200px;
+  height: 200px;
+}
+
+.geheimnis {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+
+.status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--linie-stark);
+}
+
+.status-vermessen {
+  border-color: var(--petrol-tief);
+  color: var(--petrol-tief);
+}
+
+.ergebnis-groesse {
+  font-size: 40px;
+  line-height: 1.25;
+  font-weight: 600;
+}

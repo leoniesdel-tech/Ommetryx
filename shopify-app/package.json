@@ -21,7 +21,8 @@
     "test": "vitest run",
     "db:migrate": "prisma migrate dev",
     "db:startwerte": "node prisma/startwerte.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "team:einladen": "tsx scripts/team-einladen.ts"
   },
   "type": "module",
   "engines": {
@@ -38,17 +39,21 @@
     "@shopify/shopify-app-react-router": "^4.0.0",
     "@shopify/shopify-app-session-storage-prisma": "^11.0.0",
     "isbot": "^5.1.31",
+    "otpauth": "^9.5.2",
     "prisma": "^6.16.3",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router": "7.18.2",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@shopify/api-codegen-preset": "^1.2.0",
     "@shopify/polaris-types": "^2.0.0",
     "@types/eslint": "^9.6.1",
     "@types/node": "^22.18.8",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.25",
     "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
@@ -61,6 +66,7 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "graphql-config": "^5.1.1",
     "prettier": "^3.6.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^6.3.6",
     "vitest": "^3.2.7"

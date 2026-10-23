@@ -214,6 +214,11 @@ Befehle (im Ordner `packages/empfehlung`):
 | `npm run db:migrate` | Datenbank-Änderung aus `prisma/schema.prisma` als Migration anlegen und anwenden. Vorher die App stoppen (Windows sperrt Dateien). |
 | `npm run db:startwerte` | Konfiguration aus `packages/empfehlung/konfiguration/` in die Datenbank (ersetzt die Version, setzt sie aktiv) |
 | `npm run db:studio` | Prisma Studio: Datenbank im Browser ansehen (http://localhost:5555) |
+| `npm run team:einladen -- --email … --name …` | Teammitglied für `/intern` einladen (gibt den Einrichtungspfad aus; erneute Einladung setzt den Zugang zurück). Pfad nie in den Chat schreiben, direkt im Browser öffnen. |
+
+**Aufbau `/intern`:** Server-Code in `app/intern/*.server.ts`, gemeinsame Regeln ohne Geheimnisse in `app/intern/regeln.ts`, reine Logik in `app/intern/erfassung.ts`. Routen `app/routes/intern*.tsx`; `intern_.…` liegen außerhalb des geschützten Layouts (Anmelden, Einrichten, Abmelden). **Jeder Loader und jede Action ruft selbst `verlangeTeam` auf**, weil React Router Loader parallel ausführt.
+**Regel:** Komponenten dürfen nichts aus `*.server.ts` importieren (sonst Fehler „Server-only module referenced by client“). Prüfen geht mit `curl -g "http://localhost:PORT/app/routes/<datei>?import"` (muss 200 liefern).
+**Shopify-GraphQL:** vor dem Einbau mit dem Skill `shopify-plugin:shopify-admin` suchen und validieren (API 2026-07, `OPT_OUT_INSTRUMENTATION=true` setzen, keine Nutzertexte mitschicken).
 
 **Wichtig zur Umgebung:** Befehle, die Leonies Anmeldungen brauchen (`shopify …`, `git push`), immer mit `run_in_terminal` in ihrem Terminal starten. Globale Installationen über Bash (z. B. `npm install -g`) landen in einer abgeschotteten Umgebung und sind in Leonies Terminal nicht sichtbar. Die Shopify CLI ist deshalb in ihrem Terminal installiert. Das Terminal-Panel erlaubt nur Startordner innerhalb der Sitzung, daher `--path` bzw. `git -C` statt `cd`. Leonie möchte möglichst wenig selbst im Terminal tun: Links mit `Start-Process` in ihrem Browser öffnen, Fragen im Terminal möglichst über Flags vorab beantworten.
 
@@ -240,8 +245,13 @@ Befehle (im Ordner `packages/empfehlung`):
 - Wo die Tabelle „nicht werten“ sagt (z. B. oversized bei taillierter Taille, Stretch-Bund): **Gewicht 0, nur Mindestprüfung**.
 - Leggings-Bereiche in % werden **nicht zusätzlich umgerechnet**.
 
+**Interner Bereich (gebaut 23.10., Etappe 5)**
+- `/intern` mit eigenem Team-Login: **Passwort (scrypt) + TOTP-Code aus einer Authenticator-App**. Keine Registrierung, nur Einladung per `npm run team:einladen` (Link 24 h, einmalig). 5 Fehlversuche → 15 Min. Sperre, Code nie zweimal gültig, Sitzung 8 h (Cookie `ox_intern`, HttpOnly, Secure, SameSite=Strict, Path=/intern), Origin-Prüfung bei Formularen. TOTP-Geheimnis AES-256-GCM-verschlüsselt mit `INTERN_SCHLUESSEL` aus `.env`.
+- Leonie ist als erstes Teammitglied eingerichtet (Login mit ihrer GMX-Adresse).
+- Erfassungsmaske: Shop → Produkt (live aus Shopify) → Artikel-Eigenschaften und Maße je Größe (flach eingeben, Umfänge × 2), Prüfungen (Pflichtmaße, `unrealistisches_ergebnis`, Hinweis wenn Maße nicht wachsen), Probe-Rechnung mit erfundenen Körpermaßen (nicht gespeichert).
+- Im Test-Shop gibt es die „Testbluse Leinen“ (38–44, Brust-Umfang 100/104/108/112) – Probe Brust 96 regulär → 40.
+
 **Technik (vorgeschlagen, von Leonie nicht ausdrücklich bestätigt – vorerst so umsetzen)**
-- Interne Erfassung unter `/intern`, eigener Team-Login mit Zwei-Faktor-Code.
 - Login gilt pro Shop-Domain: In einem neuen Shop meldet sich die Kundin einmal per Code an.
 - Zahlenfelder mit `inputmode="decimal"`, Komma erlaubt (z. B. 92,5).
 
