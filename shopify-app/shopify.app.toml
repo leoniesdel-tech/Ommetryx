@@ -7,7 +7,25 @@ name = "Ommetryx"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,write_metaobjects,write_metaobject_definitions"
+scopes = "write_products,write_metaobjects,write_metaobject_definitions,write_app_proxy"
+
+# Widget ↔ Backend: https://<shop>/apps/ommetryx/... → <app>/proxy/...
+# Jede Anfrage trägt eine Shopify-Signatur, die App prüft sie (authenticate.public.appProxy).
+[app_proxy]
+url = "/proxy"
+prefix = "apps"
+subpath = "ommetryx"
+
+# Ist ein Produkt von Ommetryx vermessen? Gesetzt beim Speichern in /intern.
+# Der App-Block im Theme liest es und zeigt den Button nur bei vermessenen Produkten.
+[product.metafields.app.vermessen]
+type = "boolean"
+name = "Ommetryx: vermessen"
+description = "Wird von Ommetryx gesetzt, wenn Kleidungsmaße für dieses Produkt vorliegen."
+
+  [product.metafields.app.vermessen.access]
+  admin = "merchant_read"
+  storefront = "public_read"
 
 [product.metafields.app.demo_info]
 type = "single_line_text_field"

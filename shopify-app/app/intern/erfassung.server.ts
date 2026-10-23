@@ -2,7 +2,8 @@
 
 import type { Konfiguration } from "@ommetryx/empfehlung";
 import db from "../db.server";
-import { ladeAktiveKonfiguration } from "../models/konfiguration.server";
+import { aktiveKonfiguration } from "../models/konfiguration.server";
+import { ladeArtikel } from "../models/artikel.server";
 import { unauthenticated } from "../shopify.server";
 import type { GeprüfterArtikel } from "./erfassung";
 
@@ -26,16 +27,12 @@ interface GraphqlAntwort<T> {
   data?: T;
 }
 
-let konfigurationsCache: Promise<Konfiguration> | undefined;
-
 /** Aktive Konfiguration (einmal je Serverstart geladen). */
 export function konfiguration(): Promise<Konfiguration> {
-  konfigurationsCache ??= ladeAktiveKonfiguration(db).catch((fehler) => {
-    konfigurationsCache = undefined;
-    throw fehler;
-  });
-  return konfigurationsCache;
+  return aktiveKonfiguration();
 }
+
+export { ladeArtikel };
 
 /** Shops mit App-Zugang (aus den Shopify-Sitzungen) und Zahl der vermessenen Artikel. */
 export async function shopsMitArtikeln() {
@@ -116,15 +113,41 @@ export async function produktMitGroessen(shop: string, produktGid: string) {
   return json.data?.product ?? null;
 }
 
-export function ladeArtikel(shop: string, produktGid: string) {
-  return db.artikel.findFirst({
-    where: { shop: { domain: shop }, shopifyProduktId: produktGid },
-    include: { groessen: { orderBy: { reihenfolge: "asc" } }, vermessungen: { orderBy: { erfasstAm: "desc" }, take: 1, include: { teamMitglied: { select: { name: true } } } } },
-  });
+/**
+ * Speichert Artikel und Größen (ersetzt alle Größen), vermerkt die Vermessung
+ * und markiert das Produkt in Shopify als vermessen (damit der Button im Shop erscheint).
+ */
+export async function speichereArtikel(shop: string, produktGid: string, titel: string, artikel: GeprüfterArtikel, teamMitgliedId: number) {
+  const gespeichert = await speichereInDatenbank(shop, produktGid, titel, artikel, teamMitgliedId);
+  await markiereVermessen(shop, produktGid);
+  return gespeichert;
 }
 
-/** Speichert Artikel und Größen (ersetzt alle Größen) und vermerkt die Vermessung. */
-export async function speichereArtikel(shop: string, produktGid: string, titel: string, artikel: GeprüfterArtikel, teamMitgliedId: number) {
+async function markiereVermessen(shop: string, produktGid: string) {
+  const admin = await adminFuer(shop);
+  const antwort = await admin.graphql(
+    `#graphql
+    mutation vermessenMarkieren($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields {
+          key
+          namespace
+          value
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }`,
+    { variables: { metafields: [{ ownerId: produktGid, namespace: "$app", key: "vermessen", type: "boolean", value: "true" }] } },
+  );
+  const json = (await antwort.json()) as GraphqlAntwort<{ metafieldsSet: { userErrors: { message: string }[] } }>;
+  const fehler = json.data?.metafieldsSet.userErrors ?? [];
+  if (fehler.length > 0) throw new Error(`Metafeld „vermessen“ nicht gesetzt: ${fehler.map((f) => f.message).join(", ")}`);
+}
+
+function speichereInDatenbank(shop: string, produktGid: string, titel: string, artikel: GeprüfterArtikel, teamMitgliedId: number) {
   const { groessen, ...felder } = artikel;
   return db.$transaction(async (tx) => {
     const shopZeile = await tx.shop.upsert({ where: { domain: shop }, create: { domain: shop }, update: {} });

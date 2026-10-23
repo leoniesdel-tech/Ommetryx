@@ -251,6 +251,15 @@ Befehle (im Ordner `packages/empfehlung`):
 - Erfassungsmaske: Shop → Produkt (live aus Shopify) → Artikel-Eigenschaften und Maße je Größe (flach eingeben, Umfänge × 2), Prüfungen (Pflichtmaße, `unrealistisches_ergebnis`, Hinweis wenn Maße nicht wachsen), Probe-Rechnung mit erfundenen Körpermaßen (nicht gespeichert).
 - Im Test-Shop gibt es die „Testbluse Leinen“ (38–44, Brust-Umfang 100/104/108/112) – Probe Brust 96 regulär → 40.
 
+**Widget (Etappe 6, begonnen 23.10. – noch nicht abgeschlossen)**
+- Theme App Extension `extensions/ommetryx-widget`: Block `groessenberater.liquid` (zeigt den Button nur bei Metafeld `$app.vermessen = true`, im Theme-Editor sonst einen Hinweis), Lader `assets/ommetryx-lader.js` (1,5 KB, lädt das Widget erst beim Klick), Widget `assets/ommetryx-widget.js` (gebaut aus `widget/src/` mit `npm run widget:bauen`, läuft auch im predev).
+- App Proxy `/apps/ommetryx/*` → `/proxy/*`: `proxy.artikel` (GET, vermessen?) und `proxy.empfehlung` (POST, Maße nur im JSON-Inhalt). Signaturprüfung mit `authenticate.public.appProxy`, nichts gespeichert, keine Maße in Antworten bei Fehlern. Scope `write_app_proxy` ergänzt.
+- Widget-Ablauf: Einwilligung (**Entwurf**, nichts gespeichert, Nachweis kommt in Etappe 7) → Maße → Passform → Ergebnis mit Passform-Umschalter. Shadow DOM, Fokus-Falle, Esc, Live-Region, `prefers-reduced-motion`. Schrift vorerst Systemschrift (Sora fehlt noch).
+- Beim Speichern in `/intern` wird das Metafeld `$app.vermessen` gesetzt (Testbluse ist neu gespeichert).
+- **Stand am 23.10. abends:** Block im Theme-Editor per Direktlink geöffnet; Leonie muss ihn noch über die Variantenauswahl ziehen und speichern. Danach: Testbluse im Shop öffnen (Shop-Passwort unter Onlineshop → Einstellungen), Widget mit 168/96/102 testen → 40 erwartet, Passform umschalten, ein nicht vermessenes Produkt prüfen. Dann Commit/Push und Etappe 6 abschließen.
+- Direktlink Theme-Editor: `https://ommetryx-test.myshopify.com/admin/themes/current/editor?template=product&addAppBlockId=afd273d42cc347f2f3caddd2a721f864/groessenberater&target=mainSection`
+- `shopify app dev` fragt beim Start nach dem Shop-Passwort (Besucherschutz des Test-Shops).
+
 **Technik (vorgeschlagen, von Leonie nicht ausdrücklich bestätigt – vorerst so umsetzen)**
 - Login gilt pro Shop-Domain: In einem neuen Shop meldet sich die Kundin einmal per Code an.
 - Zahlenfelder mit `inputmode="decimal"`, Komma erlaubt (z. B. 92,5).

@@ -4,6 +4,18 @@
 
 import type { PrismaClient } from "@prisma/client";
 import { ladeKonfiguration, type Konfiguration } from "@ommetryx/empfehlung";
+import db from "../db.server";
+
+let cache: Promise<Konfiguration> | undefined;
+
+/** Aktive Konfiguration, einmal je Serverstart geladen (nach `npm run db:startwerte` App neu starten). */
+export function aktiveKonfiguration(): Promise<Konfiguration> {
+  cache ??= ladeAktiveKonfiguration(db).catch((fehler) => {
+    cache = undefined;
+    throw fehler;
+  });
+  return cache;
+}
 
 /** Leere Felder (null aus der Datenbank) weglassen, wie in der Excel-Datei. */
 function ohneLeere<T extends object>(zeile: T) {

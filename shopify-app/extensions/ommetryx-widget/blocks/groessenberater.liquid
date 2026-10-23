@@ -1,0 +1,43 @@
+{%- comment -%}
+  Ommetryx Größenberater – Einstiegs-Button auf der Produktseite.
+  Erscheint nur, wenn das Produkt von Ommetryx vermessen ist (Metafeld $app.vermessen).
+  Der Lader (ommetryx-lader.js) holt das eigentliche Widget erst beim Klick.
+{%- endcomment -%}
+{%- assign ox_produkt = block.settings.product | default: product -%}
+{%- assign ox_vermessen = ox_produkt.metafields['$app'].vermessen.value -%}
+
+{%- if ox_produkt and ox_vermessen == true -%}
+  <div
+    class="ox-einstieg"
+    data-ox-einstieg
+    data-produkt="{{ ox_produkt.id }}"
+    data-proxy="/apps/ommetryx"
+    data-widget="{{ 'ommetryx-widget.js' | asset_url }}"
+    style="margin: 0 0 12px;"
+  >
+    <button
+      type="button"
+      class="button button--secondary"
+      aria-haspopup="dialog"
+      style="min-height: 44px; width: 100%;"
+    >
+      {{ block.settings.text | escape }}
+    </button>
+  </div>
+{%- elsif request.design_mode -%}
+  <p style="margin: 0 0 12px; padding: 8px 12px; border: 1px dashed #7d868a; font-size: 14px;">
+    Ommetryx: Für dieses Produkt liegen noch keine Maße vor. Der Button erscheint nur bei vermessenen Produkten.
+  </p>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Ommetryx Größenberater",
+  "target": "content",
+  "javascript": "ommetryx-lader.js",
+  "settings": [
+    { "type": "product", "id": "product", "label": "Produkt", "autofill": true },
+    { "type": "text", "id": "text", "label": "Text auf dem Button", "default": "Meine Größe finden" }
+  ]
+}
+{% endschema %}

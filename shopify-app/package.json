@@ -22,7 +22,9 @@
     "db:migrate": "prisma migrate dev",
     "db:startwerte": "node prisma/startwerte.ts",
     "db:studio": "prisma studio",
-    "team:einladen": "tsx scripts/team-einladen.ts"
+    "team:einladen": "tsx scripts/team-einladen.ts",
+    "widget:bauen": "node widget/bauen.mjs",
+    "widget:beobachten": "node widget/bauen.mjs --beobachten"
   },
   "type": "module",
   "engines": {
