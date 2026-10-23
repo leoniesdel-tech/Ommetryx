@@ -1,0 +1,22 @@
+{
+  "_hinweis": "Erfundene Testwerte zum Ausprobieren. Ändern, speichern, dann `npm run beispiel`. Passform: koerpernah, regulaer, locker oder oversized.",
+  "passform": "regulaer",
+  "koerper": {
+    "koerpergroesse": 168,
+    "brust": 96,
+    "huefte": 102
+  },
+  "artikel": {
+    "artikelart": "web_oberteil",
+    "schnitt": "regulaer",
+    "material_dehnung_prozent": 15,
+    "tailliert": false,
+    "aermel_typ": "eingesetzt",
+    "groessen": [
+      { "groesse": "38", "masse": { "brust": 100 } },
+      { "groesse": "40", "masse": { "brust": 104 } },
+      { "groesse": "42", "masse": { "brust": 108 } },
+      { "groesse": "44", "masse": { "brust": 112 } }
+    ]
+  }
+}

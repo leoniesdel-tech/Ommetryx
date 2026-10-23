@@ -181,9 +181,23 @@ Ziel: **WCAG 2.2 AA** (entschieden 23.10.; die Checkliste nennt noch 2.1). Check
 Datei **„Design2“**, fileKey `4u0OvbUTYrundT6U0MYQcq`. Nur auf den Seiten „Design v1 · Endkunde / Händler / Intern“ arbeiten. Wireframe-Seiten (Endkunde 2:2, Händler 2:3, Intern 2:4) **nie verändern**. Vor `use_figma` immer den Skill `figma:figma-use` laden.
 - Offen: I02 um die neuen Artikel-Felder ergänzen; zwei leere Frames „Frame“ (`40:160`, `40:282`) auf „Design v1 · Händler“ löschen.
 
-## 13. Befehle
+## 13. Code und Befehle
 
-Noch keine – wird ergänzt, sobald das App-Grundgerüst steht (Start, Tests, Datenbank-Migration).
+**Empfehlungsmodul** `packages/empfehlung/` (Etappe 2, fertig 23.10.): reines TypeScript, keine Shopify- oder Datenbank-Abhängigkeit. Node 24 führt `.ts` direkt aus, kein Build-Schritt.
+- `src/empfehle.ts` Rechnung nach v3 · `src/konfiguration.ts` Laden und Prüfen (Zod) · `src/dehnung.ts`, `src/sprung.ts`, `src/strafe.ts` Teilschritte · `src/typen.ts` Ein- und Ausgaben
+- `konfiguration/konfiguration-v3.json` wird **automatisch** aus der Excel-Datei erzeugt, nie von Hand ändern.
+- `konfiguration/ergaenzungen-v3.json` wird **von Hand** gepflegt: Zuordnung Artikelart → Tabellenzeilen, Werte, die in v3 nur als Text stehen (Schulter 0,8, Ärmellänge 0,3, Mindest Klasse 1). Vom Mitgründer zu prüfen.
+- Offene Punkte stehen im Code als `OFFEN` und in den Tests als `it.todo`.
+
+Befehle (im Ordner `packages/empfehlung`):
+
+| Befehl | Was er tut |
+|---|---|
+| `npm test` | alle Tests einmal |
+| `npm run test:watch` | Tests laufen bei jeder Änderung neu |
+| `npm run typecheck` | TypeScript-Prüfung |
+| `npm run konfig` | Excel-Datei → `konfiguration-v3.json` (nach jeder Excel-Änderung) |
+| `npm run beispiel` | Tabelle wie das Excel-Rechenbeispiel, Eingaben in `beispiele/bluse.json` |
 
 ## 14. Entscheidungen aus dem Brainstorming (23.10.)
 
@@ -222,6 +236,13 @@ Bis zur Klärung nicht raten.
 2. **Excel-Beispiel:** „3 % Elastan“ wird mit Dehnungsklasse 1 gerechnet. 3 % gemessene Dehnung wäre aber Klasse 0. Im Test vorerst einen Dehnungswert sicher in Klasse 1 verwenden (z. B. 15 %), Excel-Datei nicht ändern.
 3. **Figur-Korrektur:** v3 verweist auf v2, v2 liegt nicht vor. Optionen: v2-Abschnitt besorgen, neue Tabelle entwerfen oder Figur zunächst ohne Wirkung. Nötig vor dem Widget-Ergebnis.
 4. **Neue Felder:** `hat_kragen` und `hals` (Hemden) sowie `taille_gedehnt` (Gummizugbund) für die Ausschluss-Regeln. Nötig in Etappe 5.
+4a. **Ergänzungen prüfen** (`packages/empfehlung/konfiguration/ergaenzungen-v3.json`): welche Tabellenzeilen jede Artikelart nutzt, Mindest Klasse 1 für den Oberarm (in v3 nicht genannt, vorerst 0).
+4b. **Auslegungen im Code** (wörtlich nach v3 umgesetzt, bitte bestätigen):
+   - Die Oversized-Obergrenze bestraft auch die Bund-Taille (fester Bund: über 5 cm Mehrweite).
+   - Fehlt für die gewählte Passform ein Bereich beim Primärmaß (z. B. Leggings haben nur „körpernah“), gilt der Bereich des Schnitts, und das Ergebnis zählt als „begrenzt“.
+   - „Knapp“ heißt (zweitbester − bester Score) ÷ zweitbester Score < 10 %.
+   - Unter 60 Konfidenz: `recommended_size` ist leer, nur die Zonen werden geliefert.
+   - Ärmellänge „zu kurz“ zählt mit `faktor_zu_eng` (2).
 
 **Leonie (hat Zeit)**
 5. **Automatischer Schnitt:** In Shopify gibt es keine einheitliche Größentabelle. Vorschlag: Das Team trägt die Körpermaß-Tabelle einmal pro Marke ein, sonst wird der Schnitt manuell gesetzt. Nötig in Etappe 5.

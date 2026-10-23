@@ -1,0 +1,809 @@
+{
+  "_hinweis": "Automatisch erzeugt aus docs/ommetryx-konfiguration-v3.xlsx mit `npm run konfig`. Nicht von Hand ändern.",
+  "version": "v3",
+  "bereiche": [
+    {
+      "kategorie_id": "web_oberteil",
+      "kategorie": "Blusen, Hemden, Kleider (Webware)",
+      "messpunkt": "brust",
+      "passform": "koerpernah",
+      "unter": 4,
+      "ober": 8,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "Lage B, Grenzen A",
+      "quelle": "McCall Ease Allowances; Aldrich/Joseph-Armstrong Grundschnitt; Sakata et al. 2021"
+    },
+    {
+      "kategorie_id": "web_oberteil",
+      "kategorie": "Blusen, Hemden, Kleider (Webware)",
+      "messpunkt": "brust",
+      "passform": "regulaer",
+      "unter": 8,
+      "ober": 12,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "Lage B, Grenzen A",
+      "quelle": "McCall Ease Allowances; Aldrich/Joseph-Armstrong Grundschnitt; Sakata et al. 2021"
+    },
+    {
+      "kategorie_id": "web_oberteil",
+      "kategorie": "Blusen, Hemden, Kleider (Webware)",
+      "messpunkt": "brust",
+      "passform": "locker",
+      "unter": 12,
+      "ober": 18,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "Lage B, Grenzen A",
+      "quelle": "McCall Ease Allowances; Aldrich/Joseph-Armstrong Grundschnitt; Sakata et al. 2021"
+    },
+    {
+      "kategorie_id": "web_oberteil",
+      "kategorie": "Blusen, Hemden, Kleider (Webware)",
+      "messpunkt": "brust",
+      "passform": "oversized",
+      "unter": 18,
+      "ober": 28,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "Lage B, Grenzen A",
+      "quelle": "McCall Ease Allowances; Aldrich/Joseph-Armstrong Grundschnitt; Sakata et al. 2021"
+    },
+    {
+      "kategorie_id": "jersey",
+      "kategorie": "T-Shirts, Tops, Kleider (Jersey)",
+      "messpunkt": "brust",
+      "passform": "koerpernah",
+      "unter": -4,
+      "ober": 2,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P/A",
+      "quelle": "The Shapes of Fabric; MDPI T-Shirt-Studie"
+    },
+    {
+      "kategorie_id": "jersey",
+      "kategorie": "T-Shirts, Tops, Kleider (Jersey)",
+      "messpunkt": "brust",
+      "passform": "regulaer",
+      "unter": 2,
+      "ober": 8,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P/A",
+      "quelle": "The Shapes of Fabric; MDPI T-Shirt-Studie"
+    },
+    {
+      "kategorie_id": "jersey",
+      "kategorie": "T-Shirts, Tops, Kleider (Jersey)",
+      "messpunkt": "brust",
+      "passform": "locker",
+      "unter": 8,
+      "ober": 16,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P/A",
+      "quelle": "The Shapes of Fabric; MDPI T-Shirt-Studie"
+    },
+    {
+      "kategorie_id": "jersey",
+      "kategorie": "T-Shirts, Tops, Kleider (Jersey)",
+      "messpunkt": "brust",
+      "passform": "oversized",
+      "unter": 16,
+      "ober": 26,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P/A",
+      "quelle": "The Shapes of Fabric; MDPI T-Shirt-Studie"
+    },
+    {
+      "kategorie_id": "strick",
+      "kategorie": "Strick, Pullover",
+      "messpunkt": "brust",
+      "passform": "koerpernah",
+      "unter": -4,
+      "ober": 2,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P",
+      "quelle": "Lion Brand Ease-Tabelle"
+    },
+    {
+      "kategorie_id": "strick",
+      "kategorie": "Strick, Pullover",
+      "messpunkt": "brust",
+      "passform": "regulaer",
+      "unter": 2,
+      "ober": 10,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P",
+      "quelle": "Lion Brand Ease-Tabelle"
+    },
+    {
+      "kategorie_id": "strick",
+      "kategorie": "Strick, Pullover",
+      "messpunkt": "brust",
+      "passform": "locker",
+      "unter": 10,
+      "ober": 18,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P",
+      "quelle": "Lion Brand Ease-Tabelle"
+    },
+    {
+      "kategorie_id": "strick",
+      "kategorie": "Strick, Pullover",
+      "messpunkt": "brust",
+      "passform": "oversized",
+      "unter": 18,
+      "ober": 30,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "P",
+      "quelle": "Lion Brand Ease-Tabelle"
+    },
+    {
+      "kategorie_id": "jacke",
+      "kategorie": "Blazer, Jacken",
+      "messpunkt": "brust",
+      "passform": "koerpernah",
+      "unter": 8,
+      "ober": 11,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Jackets; ASDP; Monobe et al. 2017"
+    },
+    {
+      "kategorie_id": "jacke",
+      "kategorie": "Blazer, Jacken",
+      "messpunkt": "brust",
+      "passform": "regulaer",
+      "unter": 11,
+      "ober": 15,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Jackets; ASDP; Monobe et al. 2017"
+    },
+    {
+      "kategorie_id": "jacke",
+      "kategorie": "Blazer, Jacken",
+      "messpunkt": "brust",
+      "passform": "locker",
+      "unter": 15,
+      "ober": 22,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Jackets; ASDP; Monobe et al. 2017"
+    },
+    {
+      "kategorie_id": "jacke",
+      "kategorie": "Blazer, Jacken",
+      "messpunkt": "brust",
+      "passform": "oversized",
+      "unter": 22,
+      "ober": 32,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Jackets; ASDP; Monobe et al. 2017"
+    },
+    {
+      "kategorie_id": "mantel",
+      "kategorie": "Mäntel",
+      "messpunkt": "brust",
+      "passform": "koerpernah",
+      "unter": 13,
+      "ober": 17,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Coats; ASDP"
+    },
+    {
+      "kategorie_id": "mantel",
+      "kategorie": "Mäntel",
+      "messpunkt": "brust",
+      "passform": "regulaer",
+      "unter": 17,
+      "ober": 21,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Coats; ASDP"
+    },
+    {
+      "kategorie_id": "mantel",
+      "kategorie": "Mäntel",
+      "messpunkt": "brust",
+      "passform": "locker",
+      "unter": 21,
+      "ober": 30,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Coats; ASDP"
+    },
+    {
+      "kategorie_id": "mantel",
+      "kategorie": "Mäntel",
+      "messpunkt": "brust",
+      "passform": "oversized",
+      "unter": 30,
+      "ober": 40,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Coats; ASDP"
+    },
+    {
+      "kategorie_id": "web_tailliert",
+      "kategorie": "Kleider und Blusen tailliert (Webware)",
+      "messpunkt": "taille",
+      "passform": "koerpernah",
+      "unter": 2,
+      "ober": 4,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "P/A",
+      "quelle": "ASDP; Threads; Sakata et al. 2021"
+    },
+    {
+      "kategorie_id": "web_tailliert",
+      "kategorie": "Kleider und Blusen tailliert (Webware)",
+      "messpunkt": "taille",
+      "passform": "regulaer",
+      "unter": 4,
+      "ober": 8,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "P/A",
+      "quelle": "ASDP; Threads; Sakata et al. 2021"
+    },
+    {
+      "kategorie_id": "web_tailliert",
+      "kategorie": "Kleider und Blusen tailliert (Webware)",
+      "messpunkt": "taille",
+      "passform": "locker",
+      "unter": 8,
+      "ober": 14,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "P/A",
+      "quelle": "ASDP; Threads; Sakata et al. 2021"
+    },
+    {
+      "kategorie_id": "rock_hose_fest",
+      "kategorie": "Röcke, Hosen mit festem Bund (Webware)",
+      "messpunkt": "taille",
+      "passform": "koerpernah",
+      "unter": 1,
+      "ober": 3,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "Rudolf et al. 2021; ASDP; Threads – Bereiche überlappen bewusst"
+    },
+    {
+      "kategorie_id": "rock_hose_fest",
+      "kategorie": "Röcke, Hosen mit festem Bund (Webware)",
+      "messpunkt": "taille",
+      "passform": "regulaer",
+      "unter": 1,
+      "ober": 3,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "Rudolf et al. 2021; ASDP; Threads – Bereiche überlappen bewusst"
+    },
+    {
+      "kategorie_id": "rock_hose_fest",
+      "kategorie": "Röcke, Hosen mit festem Bund (Webware)",
+      "messpunkt": "taille",
+      "passform": "locker",
+      "unter": 2,
+      "ober": 4,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "Rudolf et al. 2021; ASDP; Threads – Bereiche überlappen bewusst"
+    },
+    {
+      "kategorie_id": "rock_hose_fest",
+      "kategorie": "Röcke, Hosen mit festem Bund (Webware)",
+      "messpunkt": "taille",
+      "passform": "oversized",
+      "unter": 2,
+      "ober": 5,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "Rudolf et al. 2021; ASDP; Threads – Bereiche überlappen bewusst"
+    },
+    {
+      "kategorie_id": "rock_hose_stretch",
+      "kategorie": "Röcke, Hosen mit Stretch-Bund (Klasse 1)",
+      "messpunkt": "taille",
+      "passform": "koerpernah",
+      "unter": -1,
+      "ober": 1,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 1,
+      "vertrauen": "A",
+      "quelle": "Fachpraxis; ersetzt die Dehnungskorrektur an der Taille"
+    },
+    {
+      "kategorie_id": "rock_hose_stretch",
+      "kategorie": "Röcke, Hosen mit Stretch-Bund (Klasse 1)",
+      "messpunkt": "taille",
+      "passform": "regulaer",
+      "unter": 0,
+      "ober": 2,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 1,
+      "vertrauen": "A",
+      "quelle": "Fachpraxis; ersetzt die Dehnungskorrektur an der Taille"
+    },
+    {
+      "kategorie_id": "rock_hose_stretch",
+      "kategorie": "Röcke, Hosen mit Stretch-Bund (Klasse 1)",
+      "messpunkt": "taille",
+      "passform": "locker",
+      "unter": 1,
+      "ober": 3,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 1,
+      "vertrauen": "A",
+      "quelle": "Fachpraxis; ersetzt die Dehnungskorrektur an der Taille"
+    },
+    {
+      "kategorie_id": "web_unterteil",
+      "kategorie": "Röcke, Hosen, Kleider (Webware)",
+      "messpunkt": "huefte",
+      "passform": "koerpernah",
+      "unter": 4,
+      "ober": 7,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Skirts/Pants; Rudolf et al. 2021; Choi & Ashdown 2010"
+    },
+    {
+      "kategorie_id": "web_unterteil",
+      "kategorie": "Röcke, Hosen, Kleider (Webware)",
+      "messpunkt": "huefte",
+      "passform": "regulaer",
+      "unter": 7,
+      "ober": 11,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Skirts/Pants; Rudolf et al. 2021; Choi & Ashdown 2010"
+    },
+    {
+      "kategorie_id": "web_unterteil",
+      "kategorie": "Röcke, Hosen, Kleider (Webware)",
+      "messpunkt": "huefte",
+      "passform": "locker",
+      "unter": 11,
+      "ober": 16,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Skirts/Pants; Rudolf et al. 2021; Choi & Ashdown 2010"
+    },
+    {
+      "kategorie_id": "web_unterteil",
+      "kategorie": "Röcke, Hosen, Kleider (Webware)",
+      "messpunkt": "huefte",
+      "passform": "oversized",
+      "unter": 16,
+      "ober": 26,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "B",
+      "quelle": "McCall Skirts/Pants; Rudolf et al. 2021; Choi & Ashdown 2010"
+    },
+    {
+      "kategorie_id": "jersey_unterteil",
+      "kategorie": "Röcke, Kleider (Jersey)",
+      "messpunkt": "huefte",
+      "passform": "koerpernah",
+      "unter": -4,
+      "ober": 2,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "A",
+      "quelle": "abgeleitet aus Jersey-Brust"
+    },
+    {
+      "kategorie_id": "jersey_unterteil",
+      "kategorie": "Röcke, Kleider (Jersey)",
+      "messpunkt": "huefte",
+      "passform": "regulaer",
+      "unter": 2,
+      "ober": 8,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "A",
+      "quelle": "abgeleitet aus Jersey-Brust"
+    },
+    {
+      "kategorie_id": "jersey_unterteil",
+      "kategorie": "Röcke, Kleider (Jersey)",
+      "messpunkt": "huefte",
+      "passform": "locker",
+      "unter": 8,
+      "ober": 14,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "A",
+      "quelle": "abgeleitet aus Jersey-Brust"
+    },
+    {
+      "kategorie_id": "jersey_unterteil",
+      "kategorie": "Röcke, Kleider (Jersey)",
+      "messpunkt": "huefte",
+      "passform": "oversized",
+      "unter": 14,
+      "ober": 24,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 2,
+      "vertrauen": "A",
+      "quelle": "abgeleitet aus Jersey-Brust"
+    },
+    {
+      "kategorie_id": "leggings",
+      "kategorie": "Leggings",
+      "messpunkt": "huefte",
+      "passform": "koerpernah",
+      "unter": -15,
+      "ober": -5,
+      "einheit": "% des Körpermaßes",
+      "referenz_dehnungsklasse": 4,
+      "vertrauen": "A, niedrig",
+      "quelle": "Fachpraxis; Patent US 6,665,577"
+    },
+    {
+      "kategorie_id": "hose_web",
+      "kategorie": "Hosen (Webware)",
+      "messpunkt": "oberschenkel",
+      "passform": "koerpernah",
+      "unter": 3,
+      "ober": 6,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "A",
+      "quelle": "Rudolf et al. 2021 (Sitzen)"
+    },
+    {
+      "kategorie_id": "hose_web",
+      "kategorie": "Hosen (Webware)",
+      "messpunkt": "oberschenkel",
+      "passform": "regulaer",
+      "unter": 6,
+      "ober": 10,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "A",
+      "quelle": "Rudolf et al. 2021 (Sitzen)"
+    },
+    {
+      "kategorie_id": "hose_web",
+      "kategorie": "Hosen (Webware)",
+      "messpunkt": "oberschenkel",
+      "passform": "locker",
+      "unter": 10,
+      "ober": 16,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "A",
+      "quelle": "Rudolf et al. 2021 (Sitzen)"
+    },
+    {
+      "kategorie_id": "hose_web",
+      "kategorie": "Hosen (Webware)",
+      "messpunkt": "oberschenkel",
+      "passform": "oversized",
+      "unter": 16,
+      "ober": 26,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "A",
+      "quelle": "Rudolf et al. 2021 (Sitzen)"
+    },
+    {
+      "kategorie_id": "aermel_web",
+      "kategorie": "Ärmel (Webware)",
+      "messpunkt": "oberarm",
+      "passform": "koerpernah",
+      "unter": 4,
+      "ober": 6,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "P/A",
+      "quelle": "Sewaholic; Sure-Fit Designs; Curvy Sewing Collective"
+    },
+    {
+      "kategorie_id": "aermel_web",
+      "kategorie": "Ärmel (Webware)",
+      "messpunkt": "oberarm",
+      "passform": "regulaer",
+      "unter": 6,
+      "ober": 9,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "P/A",
+      "quelle": "Sewaholic; Sure-Fit Designs; Curvy Sewing Collective"
+    },
+    {
+      "kategorie_id": "aermel_web",
+      "kategorie": "Ärmel (Webware)",
+      "messpunkt": "oberarm",
+      "passform": "locker",
+      "unter": 9,
+      "ober": 14,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "P/A",
+      "quelle": "Sewaholic; Sure-Fit Designs; Curvy Sewing Collective"
+    },
+    {
+      "kategorie_id": "aermel_web",
+      "kategorie": "Ärmel (Webware)",
+      "messpunkt": "oberarm",
+      "passform": "oversized",
+      "unter": 14,
+      "ober": 22,
+      "einheit": "cm",
+      "referenz_dehnungsklasse": 0,
+      "vertrauen": "P/A",
+      "quelle": "Sewaholic; Sure-Fit Designs; Curvy Sewing Collective"
+    }
+  ],
+  "mindest": [
+    {
+      "kategorie_id": "web_oberteil",
+      "messpunkt": "brust",
+      "mindest_cm_klasse0": 5,
+      "hinweis": "mit Ärmel; ärmellos 3 cm",
+      "quelle": "ASDP 6,4–10,2; Threads 6,4–7,6; Konfektion 5,1",
+      "vertrauen": "B/P"
+    },
+    {
+      "kategorie_id": "web_oberteil_aermellos",
+      "messpunkt": "brust",
+      "mindest_cm_klasse0": 3,
+      "hinweis": "ärmellose Webware",
+      "quelle": "Fachpraxis",
+      "vertrauen": "P"
+    },
+    {
+      "kategorie_id": "jacke",
+      "messpunkt": "brust",
+      "mindest_cm_klasse0": 9,
+      "quelle": "ASDP Jacke 8,9–12,7",
+      "vertrauen": "B"
+    },
+    {
+      "kategorie_id": "mantel",
+      "messpunkt": "brust",
+      "mindest_cm_klasse0": 12,
+      "quelle": "ASDP Mantel 11,4–16,5",
+      "vertrauen": "B"
+    },
+    {
+      "kategorie_id": "web_tailliert",
+      "messpunkt": "taille",
+      "mindest_cm_klasse0": 2.5,
+      "quelle": "ASDP; Threads",
+      "vertrauen": "P"
+    },
+    {
+      "kategorie_id": "oberteil_nicht_tailliert",
+      "messpunkt": "taille",
+      "mindest_cm_klasse0": 2,
+      "hinweis": "nur Mindestprüfung, Gewicht 0",
+      "quelle": "Patent-Logik Sekundärmaß",
+      "vertrauen": "A"
+    },
+    {
+      "kategorie_id": "rock_hose_fest",
+      "messpunkt": "taille",
+      "mindest_cm_klasse0": 1,
+      "quelle": "Rudolf et al. 2021",
+      "vertrauen": "B"
+    },
+    {
+      "kategorie_id": "rock_hose_stretch",
+      "messpunkt": "taille",
+      "mindest_cm_klasse0": -2,
+      "quelle": "Fachpraxis",
+      "vertrauen": "A"
+    },
+    {
+      "kategorie_id": "web_unterteil",
+      "messpunkt": "huefte",
+      "mindest_cm_klasse0": 3.5,
+      "quelle": "Rudolf et al. 2021",
+      "vertrauen": "B"
+    },
+    {
+      "kategorie_id": "hose_web",
+      "messpunkt": "oberschenkel",
+      "mindest_cm_klasse0": 3,
+      "quelle": "Rudolf et al. 2021",
+      "vertrauen": "A"
+    },
+    {
+      "kategorie_id": "aermel_web",
+      "messpunkt": "oberarm",
+      "mindest_cm_klasse0": 4,
+      "quelle": "Fachpraxis",
+      "vertrauen": "P"
+    },
+    {
+      "kategorie_id": "aermel_jersey",
+      "messpunkt": "oberarm",
+      "mindest_cm_klasse0": 0,
+      "hinweis": "Jersey und Strick",
+      "quelle": "Curvy Sewing Collective",
+      "vertrauen": "P"
+    }
+  ],
+  "dehnungsklassen": [
+    {
+      "klasse": 0,
+      "name": "starr",
+      "dehnung_von": 0,
+      "dehnung_bis": 0.05,
+      "beispiele": "Popeline, Leinen, Wollstoff",
+      "mindest_regel": "fester Wert aus Blatt Mindest"
+    },
+    {
+      "klasse": 1,
+      "name": "leicht",
+      "dehnung_von": 0.05,
+      "dehnung_bis": 0.25,
+      "beispiele": "Stretch-Denim, Webware mit Elastan, Ponte",
+      "mindest_regel": "Brust 0 · Hüfte 0 · Oberschenkel 0 · Taille −2 cm"
+    },
+    {
+      "klasse": 2,
+      "name": "mittel",
+      "dehnung_von": 0.25,
+      "dehnung_bis": 0.5,
+      "beispiele": "Single-Jersey, Interlock",
+      "mindest_regel": "−0,2 × Dehnung × Körpermaß"
+    },
+    {
+      "klasse": 3,
+      "name": "hoch",
+      "dehnung_von": 0.5,
+      "dehnung_bis": 0.75,
+      "beispiele": "Viskose-Elastan-Jersey, Rippstrick",
+      "mindest_regel": "−0,2 × Dehnung × Körpermaß"
+    },
+    {
+      "klasse": 4,
+      "name": "sehr hoch",
+      "dehnung_von": 0.75,
+      "beispiele": "Leggings, Bademode",
+      "mindest_regel": "−0,2 × Dehnung × Körpermaß"
+    }
+  ],
+  "dehnungskorrektur": [
+    {
+      "klasse": 0,
+      "koerpernah": 0,
+      "regulaer": 0,
+      "locker": 0,
+      "oversized": 0
+    },
+    {
+      "klasse": 1,
+      "koerpernah": -2,
+      "regulaer": -1,
+      "locker": 0,
+      "oversized": 0
+    },
+    {
+      "klasse": 2,
+      "koerpernah": -4,
+      "regulaer": -2,
+      "locker": 0,
+      "oversized": 0
+    },
+    {
+      "klasse": 3,
+      "koerpernah": -6,
+      "regulaer": -3,
+      "locker": 0,
+      "oversized": 0
+    },
+    {
+      "klasse": 4,
+      "hinweis": "nur Leggings, prozentual im Blatt Bereiche"
+    }
+  ],
+  "gewichte": [
+    {
+      "kategorie": "Oberteile, Jersey, Strick (nicht tailliert)",
+      "brust": 1,
+      "taille": 0,
+      "huefte": 0.6,
+      "oberarm": 0.4,
+      "hinweis": "Taille nur Mindestprüfung; Hüfte nur wenn gemessen; Oberarm nur wenn im Profil"
+    },
+    {
+      "kategorie": "Kleider und Blusen tailliert",
+      "brust": 1,
+      "taille": 0.8,
+      "huefte": 0.8,
+      "oberarm": 0.4
+    },
+    {
+      "kategorie": "Jacken, Mäntel",
+      "brust": 1,
+      "taille": 0,
+      "huefte": 0.5,
+      "oberarm": 0.5
+    },
+    {
+      "kategorie": "Röcke",
+      "taille": 1,
+      "huefte": 1
+    },
+    {
+      "kategorie": "Hosen",
+      "taille": 1,
+      "huefte": 1,
+      "oberschenkel": 0.6
+    }
+  ],
+  "parameter": {
+    "faktor_zu_eng": 2,
+    "faktor_zu_weit": 1,
+    "faktor_unter_mindest": 4,
+    "faktor_ueber_obergrenze": 2,
+    "zone_halbbreite_in_G": 0.5,
+    "schnitt_begrenzung_in_G": 1,
+    "ausschluss_unter_mindest_cm": 3,
+    "schulter_ausschluss_schmaler_cm": 2.5,
+    "schulter_toleranz_cm": 1,
+    "aermellaenge_toleranz_cm": 2,
+    "figur_korrektur_max_cm": 2,
+    "nutzbarer_dehnungsanteil": 0.2,
+    "skalierung_anteil_proportional": 0.5,
+    "k_ref_brust_cm": 92,
+    "k_ref_huefte_cm": 100,
+    "start": 100,
+    "abzug_mass_geschaetzt": 15,
+    "abzug_knapp_min": 10,
+    "abzug_knapp_max": 25,
+    "knapp_schwelle_score_diff": 0.1,
+    "abzug_widerspruch_figur": 10,
+    "abzug_schnitt_begrenzt": 10,
+    "abzug_unter_mindest": 20,
+    "schwelle_unsicher": 60,
+    "offset_faktor": 0.3,
+    "offset_feedback_cm": 2,
+    "offset_max_cm": 4,
+    "glaettung_k": 25,
+    "versatz_je_rueckmeldung_in_G": 0.5,
+    "n_hinweis": 20,
+    "quote_hinweis": 0.75,
+    "n_volle_korrektur": 50,
+    "grenze_unter_n_voll_in_G": 0.5,
+    "grenze_ab_n_voll_in_G": 1,
+    "team_freigabe_ab_cm": 1,
+    "messgenauigkeit_ziel_cm": 1,
+    "messhoehe_brust_unter_armloch_cm": 2.5
+  }
+}

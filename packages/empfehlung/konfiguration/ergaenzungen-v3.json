@@ -1,0 +1,180 @@
+{
+  "_hinweis": "Von Hand gepflegt. Werte, die in v3 nur als Text stehen oder die Zuordnung Artikelart → Tabellenzeilen, die in der Excel-Datei fehlt. Abgeleitet aus schnittstellen-dokumentation-v3.md (Abschnitte 3, 4.3, 6). Vom Mitgründer zu prüfen.",
+  "version": "v3",
+
+  "_gewichtsgruppen": "Kurzname → Text in Spalte 'kategorie' des Excel-Blatts Gewichte.",
+  "gewichtsgruppen": {
+    "oberteil": "Oberteile, Jersey, Strick (nicht tailliert)",
+    "tailliert": "Kleider und Blusen tailliert",
+    "jacke_mantel": "Jacken, Mäntel",
+    "rock": "Röcke",
+    "hose": "Hosen"
+  },
+
+  "_zusatzgewichte": "v3 Abschnitt 6: 'Zusätzlich, wenn gewertet: Schulter 0,8 · Ärmellänge 0,3'.",
+  "zusatzgewichte": {
+    "schulter": 0.8,
+    "aermellaenge": 0.3
+  },
+
+  "_mindest_klasse1": "v3 Abschnitt 4.3, Klasse 1: 'Brust 0 · Hüfte 0 · Oberschenkel 0 · Taille −2 cm'. Oberarm ist in v3 nicht genannt, hier 0 wie Brust (offen).",
+  "mindest_klasse1": {
+    "brust": 0,
+    "huefte": 0,
+    "oberschenkel": 0,
+    "oberarm": 0,
+    "taille": -2
+  },
+
+  "_groessensprung_standard_cm": "Nur wenn ein Artikel nur eine Größe hat und G nicht aus den eigenen Messungen folgt. EN 13402-3: typisch 4 cm.",
+  "groessensprung_standard_cm": 4,
+
+  "_artikelarten": "Welche Tabellenzeilen (kategorie_id aus den Blättern Bereiche und Mindest) eine Artikelart je Messpunkt nutzt. zeile = null: nur Mindestprüfung. Varianten: wenn_tailliert, wenn_aermellos, nach_bund (fest/stretch/gummizug; null = Messpunkt nicht werten). mindest_aus_zeile = true: Mindestwert immer aus dem Blatt Mindest, unabhängig von der Dehnungsklasse (Bund).",
+  "artikelarten": {
+    "web_oberteil": {
+      "name": "Blusen, Hemden, Kleider aus Webware",
+      "primaermass": "brust",
+      "gewichtsgruppe": "oberteil",
+      "gewichtsgruppe_tailliert": "tailliert",
+      "schulter_werten": true,
+      "aermellaenge_werten": true,
+      "messpunkte": {
+        "brust": {
+          "zeile": "web_oberteil",
+          "mindest_zeile": "web_oberteil",
+          "wenn_aermellos": { "zeile": "web_oberteil", "mindest_zeile": "web_oberteil_aermellos" }
+        },
+        "taille": {
+          "zeile": null,
+          "mindest_zeile": "oberteil_nicht_tailliert",
+          "wenn_tailliert": { "zeile": "web_tailliert", "mindest_zeile": "web_tailliert" }
+        },
+        "huefte": { "zeile": "web_unterteil", "mindest_zeile": "web_unterteil" },
+        "oberarm": { "zeile": "aermel_web", "mindest_zeile": "aermel_web" }
+      }
+    },
+    "jersey_oberteil": {
+      "name": "T-Shirts, Tops, Kleider aus Jersey",
+      "primaermass": "brust",
+      "gewichtsgruppe": "oberteil",
+      "schulter_werten": false,
+      "aermellaenge_werten": false,
+      "messpunkte": {
+        "brust": { "zeile": "jersey", "mindest_zeile": null },
+        "taille": { "zeile": null, "mindest_zeile": "oberteil_nicht_tailliert" },
+        "huefte": { "zeile": "jersey_unterteil", "mindest_zeile": null },
+        "oberarm": { "zeile": null, "mindest_zeile": "aermel_jersey" }
+      }
+    },
+    "strick": {
+      "name": "Strick, Pullover",
+      "primaermass": "brust",
+      "gewichtsgruppe": "oberteil",
+      "schulter_werten": false,
+      "aermellaenge_werten": false,
+      "messpunkte": {
+        "brust": { "zeile": "strick", "mindest_zeile": null },
+        "taille": { "zeile": null, "mindest_zeile": "oberteil_nicht_tailliert" },
+        "huefte": { "zeile": "jersey_unterteil", "mindest_zeile": null },
+        "oberarm": { "zeile": null, "mindest_zeile": "aermel_jersey" }
+      }
+    },
+    "jacke": {
+      "name": "Blazer, Jacken",
+      "primaermass": "brust",
+      "gewichtsgruppe": "jacke_mantel",
+      "schulter_werten": true,
+      "aermellaenge_werten": true,
+      "messpunkte": {
+        "brust": { "zeile": "jacke", "mindest_zeile": "jacke" },
+        "taille": { "zeile": null, "mindest_zeile": "oberteil_nicht_tailliert" },
+        "huefte": { "zeile": "web_unterteil", "mindest_zeile": "web_unterteil" },
+        "oberarm": { "zeile": "aermel_web", "mindest_zeile": "aermel_web" }
+      }
+    },
+    "mantel": {
+      "name": "Mäntel",
+      "primaermass": "brust",
+      "gewichtsgruppe": "jacke_mantel",
+      "schulter_werten": true,
+      "aermellaenge_werten": true,
+      "messpunkte": {
+        "brust": { "zeile": "mantel", "mindest_zeile": "mantel" },
+        "taille": { "zeile": null, "mindest_zeile": "oberteil_nicht_tailliert" },
+        "huefte": { "zeile": "web_unterteil", "mindest_zeile": "web_unterteil" },
+        "oberarm": { "zeile": "aermel_web", "mindest_zeile": "aermel_web" }
+      }
+    },
+    "rock_web": {
+      "name": "Röcke aus Webware",
+      "primaermass": "huefte",
+      "gewichtsgruppe": "rock",
+      "schulter_werten": false,
+      "aermellaenge_werten": false,
+      "messpunkte": {
+        "taille": {
+          "zeile": "rock_hose_fest",
+          "mindest_zeile": "rock_hose_fest",
+          "mindest_aus_zeile": true,
+          "nach_bund": {
+            "fest": { "zeile": "rock_hose_fest", "mindest_zeile": "rock_hose_fest", "mindest_aus_zeile": true },
+            "stretch": { "zeile": "rock_hose_stretch", "mindest_zeile": "rock_hose_stretch", "mindest_aus_zeile": true },
+            "gummizug": null
+          }
+        },
+        "huefte": { "zeile": "web_unterteil", "mindest_zeile": "web_unterteil" }
+      }
+    },
+    "rock_jersey": {
+      "name": "Röcke aus Jersey",
+      "primaermass": "huefte",
+      "gewichtsgruppe": "rock",
+      "schulter_werten": false,
+      "aermellaenge_werten": false,
+      "messpunkte": {
+        "taille": {
+          "zeile": "rock_hose_stretch",
+          "mindest_zeile": "rock_hose_stretch",
+          "mindest_aus_zeile": true,
+          "nach_bund": {
+            "fest": { "zeile": "rock_hose_fest", "mindest_zeile": "rock_hose_fest", "mindest_aus_zeile": true },
+            "stretch": { "zeile": "rock_hose_stretch", "mindest_zeile": "rock_hose_stretch", "mindest_aus_zeile": true },
+            "gummizug": null
+          }
+        },
+        "huefte": { "zeile": "jersey_unterteil", "mindest_zeile": null }
+      }
+    },
+    "hose_web": {
+      "name": "Hosen aus Webware",
+      "primaermass": "huefte",
+      "gewichtsgruppe": "hose",
+      "schulter_werten": false,
+      "aermellaenge_werten": false,
+      "messpunkte": {
+        "taille": {
+          "zeile": "rock_hose_fest",
+          "mindest_zeile": "rock_hose_fest",
+          "mindest_aus_zeile": true,
+          "nach_bund": {
+            "fest": { "zeile": "rock_hose_fest", "mindest_zeile": "rock_hose_fest", "mindest_aus_zeile": true },
+            "stretch": { "zeile": "rock_hose_stretch", "mindest_zeile": "rock_hose_stretch", "mindest_aus_zeile": true },
+            "gummizug": null
+          }
+        },
+        "huefte": { "zeile": "web_unterteil", "mindest_zeile": "web_unterteil" },
+        "oberschenkel": { "zeile": "hose_web", "mindest_zeile": "hose_web" }
+      }
+    },
+    "leggings": {
+      "name": "Leggings",
+      "primaermass": "huefte",
+      "gewichtsgruppe": "hose",
+      "schulter_werten": false,
+      "aermellaenge_werten": false,
+      "messpunkte": {
+        "huefte": { "zeile": "leggings", "mindest_zeile": null }
+      }
+    }
+  }
+}
