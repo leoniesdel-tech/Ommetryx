@@ -1,0 +1,36 @@
+# Geheimnisse – niemals ins Repo
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Heruntergeladene Bausteine und Build-Ergebnisse
+node_modules/
+build/
+dist/
+.cache/
+coverage/
+
+# Shopify CLI (lokale App-Verknüpfung)
+.shopify/
+
+# Lokale Datenbank-Dateien
+*.sqlite
+*.sqlite-journal
+pgdata/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Betriebssystem und Editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Office-Sperrdateien
+~$*
