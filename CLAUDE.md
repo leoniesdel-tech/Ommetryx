@@ -265,6 +265,18 @@ Befehle (im Ordner `packages/empfehlung`):
 - **Windows-Falle:** Stürzt `shopify app dev` ab, bleiben `react-router dev`-Prozesse übrig und sperren die Prisma-DLL (EPERM beim nächsten Start). Dann diese Node-Prozesse beenden.
 - PowerShell 5.1 verschluckt `"` in Argumenten an native Programme → GraphQL für `shopify store execute` immer per `--query-file`.
 
+**Profil und Login im Widget (Etappe 7a, fertig 26.10.)**
+- **Drei Datenbank-Benutzer:** `ommetryx_app` (nur `app`), `ommetryx_identity` (nur `identity`), `ommetryx_body` (nur `body`). Rechte in `prisma/rechte.sql`, setzen mit `npm run db:rechte` (läuft auch nach `npm run db:migrate`). Migrationen als Besitzer über `DIRECT_DATABASE_URL`. Zugänge: `app/db.server.ts` (app), `app/kundin/datenbanken.server.ts` (`identityDb`, `bodyDb`). Neue Rollen anlegen braucht Leonies `postgres`-Passwort.
+- **Schlüssel** in `.env`: `OX_SCHLUESSEL_IDENTITY` (E-Mail), `OX_SCHLUESSEL_BODY` (Maße), `OX_HASH_SCHLUESSEL` (E-Mail-Such-Hash, Code-Hash), `INTERN_SCHLUESSEL` (Team-TOTP). Gemeinsamer Baustein `app/lib/krypto.server.ts`.
+- **Tabellen** `identity`: kundin, zuordnung (kundin ↔ pseudonym_id), login_code, login_schutz, kundin_sitzung, einwilligung, shop_verknuepfung, entwicklungs_mail. `body`: koerperprofil (verschlüsseltes JSON, eine Zeile je pseudonym_id).
+- **Login:** `app/kundin/login.server.ts` – Code 10 Min., einmalig, 3 Fehlversuche → 10 Min. Sperre, max. 5 Codes je 15 Min., gleiche Antwort für bekannte/unbekannte E-Mail, Sitzung 30 Tage gleitend, gilt nur im Shop der Anmeldung.
+- **Einwilligungen:** Texte und Versionen in `app/kundin/texte.ts` (Version `entwurf-1`, werden auch ins Widget gebündelt). „verarbeitung“ vor der Maßeingabe ohne Personenbezug (kundin_id leer), „profil“ beim Speichern mit Kundin.
+- **App-Proxy-Endpunkte:** `/apps/ommetryx/einwilligung` (POST), `/apps/ommetryx/konto` (POST, `aktion`: code_anfordern, code_pruefen, profil_laden, profil_speichern, abmelden), `/apps/ommetryx/empfehlung` akzeptiert jetzt `token` statt Maßen.
+- **Widget:** Token in `localStorage` unter `ommetryx-sitzung` (nur nach aktiver Anmeldung, nie Maße/E-Mail). Ablauf: Ergebnis → „Maße speichern“ → Einwilligung Profil + E-Mail → Code → gespeichert; beim nächsten Öffnen „Willkommen zurück“ → Passform → Ergebnis. Altersgruppe optional im Maße-Schritt.
+- **E-Mails in der Entwicklung** landen im Entwicklungs-Postfach `/intern/postfach` (24 h). Brevo kommt vor dem Pilot (`app/kundin/mail.server.ts`), im Livebetrieb wirft der Versand bis dahin einen Fehler.
+- Ende-zu-Ende getestet im eingebauten Browser mit `probe@test.invalid`: speichern → neu laden → „Willkommen zurück“ → 40.
+- **Noch offen (7b):** „Mein Ommetryx“ (Maße ändern, Einwilligungen widerrufen, Shops trennen, Daten herunterladen, löschen). Später: 24-Monate-Löschung, Rate-Limit je Shop/IP für Code-Anforderungen.
+
 **Technik (vorgeschlagen, von Leonie nicht ausdrücklich bestätigt – vorerst so umsetzen)**
 - Login gilt pro Shop-Domain: In einem neuen Shop meldet sich die Kundin einmal per Code an.
 - Zahlenfelder mit `inputmode="decimal"`, Komma erlaubt (z. B. 92,5).

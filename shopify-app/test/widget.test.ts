@@ -41,10 +41,19 @@ describe("Ladezeit im Shop", () => {
     expect(statSync("extensions/ommetryx-widget/assets/ommetryx-lader.js").size).toBeLessThan(10 * 1024);
   });
 
-  it("Widget und Lader enthalten keine Konsolen-Ausgaben und kein localStorage", () => {
+  it("Widget und Lader enthalten keine Konsolen-Ausgaben und kein sessionStorage", () => {
     for (const datei of ["extensions/ommetryx-widget/assets/ommetryx-lader.js", "widget/src/widget.ts", "widget/src/eingaben.ts"]) {
       const inhalt = readFileSync(datei, "utf8");
-      expect(inhalt).not.toMatch(/console\.|localStorage|sessionStorage/);
+      expect(inhalt).not.toMatch(/console\.|sessionStorage/);
     }
+  });
+
+  it("localStorage nur für den Login-Token, nie für Maße oder E-Mail", () => {
+    expect(readFileSync("extensions/ommetryx-widget/assets/ommetryx-lader.js", "utf8")).not.toMatch(/localStorage/);
+    expect(readFileSync("widget/src/eingaben.ts", "utf8")).not.toMatch(/localStorage/);
+    const widget = readFileSync("widget/src/widget.ts", "utf8");
+    // Genau ein Schreibzugriff, und zwar mit dem festen Schlüssel für den Token.
+    expect(widget.match(/localStorage\.setItem\(/g)).toHaveLength(1);
+    expect(widget).toMatch(/localStorage\.setItem\(SPEICHER_SCHLUESSEL, token\)/);
   });
 });

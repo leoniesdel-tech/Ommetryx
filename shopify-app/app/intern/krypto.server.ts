@@ -1,7 +1,8 @@
 // Kryptografie für den Team-Login. Nur Bausteine aus node:crypto.
 
-import { createCipheriv, createDecipheriv, createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { entschluessele as entschluesseleMit, verschluessele as verschluesseleMit } from "../lib/krypto.server";
 
 const scryptAsync = promisify(scrypt) as (passwort: string, salz: Buffer, laenge: number, optionen: object) => Promise<Buffer>;
 
@@ -37,41 +38,13 @@ export async function pruefePasswortAttrappe(passwort: string): Promise<false> {
   return false;
 }
 
-export function zufallsToken(): string {
-  return randomBytes(32).toString("base64url");
-}
+// Gemeinsame Bausteine; der Team-Bereich verschlüsselt mit INTERN_SCHLUESSEL.
+export { sha256, zufallsToken } from "../lib/krypto.server";
 
-export function sha256(wert: string): string {
-  return createHash("sha256").update(wert).digest("base64url");
-}
-
-function schluessel(): Buffer {
-  if (!process.env.INTERN_SCHLUESSEL) {
-    // Lokale Entwicklung: .env nachladen, falls die Umgebung sie nicht schon gesetzt hat.
-    try {
-      process.loadEnvFile(".env");
-    } catch {
-      // keine .env vorhanden
-    }
-  }
-  const roh = process.env.INTERN_SCHLUESSEL;
-  const key = roh ? Buffer.from(roh, "base64") : undefined;
-  if (!key || key.length !== 32) throw new Error("INTERN_SCHLUESSEL fehlt oder hat nicht 32 Byte");
-  return key;
-}
-
-/** AES-256-GCM, Ergebnis: iv.tag.daten (base64url). */
 export function verschluessele(klartext: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", schluessel(), iv);
-  const daten = Buffer.concat([cipher.update(klartext, "utf8"), cipher.final()]);
-  return [iv, cipher.getAuthTag(), daten].map((b) => b.toString("base64url")).join(".");
+  return verschluesseleMit(klartext, "INTERN_SCHLUESSEL");
 }
 
 export function entschluessele(verschluesselt: string): string {
-  const [iv, tag, daten] = verschluesselt.split(".").map((t) => Buffer.from(t, "base64url"));
-  if (!iv || !tag || !daten) throw new Error("Verschlüsselter Wert hat ein falsches Format");
-  const decipher = createDecipheriv("aes-256-gcm", schluessel(), iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(daten), decipher.final()]).toString("utf8");
+  return entschluesseleMit(verschluesselt, "INTERN_SCHLUESSEL");
 }

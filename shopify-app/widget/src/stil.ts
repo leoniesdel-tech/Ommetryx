@@ -69,7 +69,7 @@ button { font: inherit; cursor: pointer; }
 
 .feld { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
 .feld label { font-weight: 600; font-size: 14px; }
-.feld input { height: 48px; font: inherit; font-size: 16px; padding: 0 12px; border: 1px solid var(--linie-stark); border-radius: 12px; background: #fff; color: var(--graphit); }
+.feld input, .feld select { height: 48px; font: inherit; font-size: 16px; padding: 0 12px; border: 1px solid var(--linie-stark); border-radius: 12px; background: #fff; color: var(--graphit); }
 .feld input[aria-invalid="true"] { border: 2px solid var(--fehler); }
 .fehler { color: var(--fehler); font-size: 14px; }
 

@@ -23,6 +23,7 @@ export default function Intern() {
           <strong>Ommetryx intern</strong>
         </Link>
         <div className="zeile" style={{ alignItems: "center" }}>
+          <Link to="/intern/postfach">Postfach</Link>
           <span>Angemeldet: {name}</span>
           <Form method="post" action="/intern/abmelden">
             <button className="knopf knopf-zweit" type="submit">

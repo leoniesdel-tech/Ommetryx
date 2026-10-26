@@ -9,10 +9,14 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Laufzeit: DATABASE_URL (Benutzer ommetryx_app, nur Bereich app),
+// DATABASE_URL_IDENTITY und DATABASE_URL_BODY (eigene Benutzer, siehe app/kundin/datenbanken.server.ts).
+// Migrationen laufen als Besitzer über DIRECT_DATABASE_URL. Rechte: prisma/rechte.sql.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["app", "identity", "body"]
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+  schemas   = ["app", "identity", "body"]
 }
 
 // Shopify-Anmeldung des Händlers (aus dem Template).
@@ -286,6 +290,141 @@ model TeamSitzung {
 
   @@map("team_sitzung")
   @@schema("app")
+}
+
+// ---------------------------------------------------------------------------
+// Bereich identity: wer die Kundin ist. Nur der Benutzer ommetryx_identity darf hier lesen.
+// E-Mail nur verschlüsselt (OX_SCHLUESSEL_IDENTITY) plus HMAC-Hash zum Suchen (OX_HASH_SCHLUESSEL).
+// ---------------------------------------------------------------------------
+
+model Kundin {
+  id                  String    @id @default(uuid())
+  emailVerschluesselt String    @map("email_verschluesselt")
+  emailHash           String    @unique @map("email_hash")
+  erstelltAm          DateTime  @default(now()) @map("erstellt_am")
+  /// Für die Löschung nach 24 Monaten Inaktivität
+  letzteAktivitaet    DateTime  @default(now()) @map("letzte_aktivitaet")
+  erinnertAm          DateTime? @map("erinnert_am")
+
+  sitzungen      KundinSitzung[]
+  einwilligungen Einwilligung[]
+  shops          ShopVerknuepfung[]
+  zuordnung      Zuordnung?
+
+  @@map("kundin")
+  @@schema("identity")
+}
+
+/// Brücke zu den Maßen im Bereich body. Einziger Ort, der Kundin und pseudonym_id verbindet.
+model Zuordnung {
+  kundinId    String @id @map("kundin_id")
+  pseudonymId String @unique @default(uuid()) @map("pseudonym_id")
+
+  kundin Kundin @relation(fields: [kundinId], references: [id], onDelete: Cascade)
+
+  @@map("zuordnung")
+  @@schema("identity")
+}
+
+/// Login-Codes: nur als HMAC gespeichert, 10 Minuten gültig, einmalig.
+model LoginCode {
+  id         Int      @id @default(autoincrement())
+  emailHash  String   @map("email_hash")
+  codeHash   String   @map("code_hash")
+  gueltigBis DateTime @map("gueltig_bis")
+  verbraucht Boolean  @default(false)
+  erstelltAm DateTime @default(now()) @map("erstellt_am")
+
+  @@index([emailHash])
+  @@map("login_code")
+  @@schema("identity")
+}
+
+/// Fehlversuche und Sperre je E-Mail-Hash (auch für E-Mails ohne Profil, damit nichts verraten wird).
+model LoginSchutz {
+  emailHash         String    @id @map("email_hash")
+  fehlversuche      Int       @default(0)
+  gesperrtBis       DateTime? @map("gesperrt_bis")
+  anforderungen     Int       @default(0)
+  anforderungenSeit DateTime  @default(now()) @map("anforderungen_seit")
+
+  @@map("login_schutz")
+  @@schema("identity")
+}
+
+model KundinSitzung {
+  id         Int      @id @default(autoincrement())
+  /// SHA-256 des Tokens, der Token selbst liegt nur im Browser der Kundin
+  tokenHash  String   @unique @map("token_hash")
+  kundinId   String   @map("kundin_id")
+  shop       String
+  gueltigBis DateTime @map("gueltig_bis")
+  erstelltAm DateTime @default(now()) @map("erstellt_am")
+
+  kundin Kundin @relation(fields: [kundinId], references: [id], onDelete: Cascade)
+
+  @@map("kundin_sitzung")
+  @@schema("identity")
+}
+
+/// Nachweis jeder Einwilligung: Zweck, Textversion, Shop, Zeitpunkt, Widerruf.
+/// kundinId leer = Einwilligung vor der Maßeingabe ohne Profil (kein Personenbezug).
+model Einwilligung {
+  id           Int       @id @default(autoincrement())
+  kundinId     String?   @map("kundin_id")
+  /// "verarbeitung" | "profil" | später "umfrage" | "lernen"
+  zweck        String
+  textversion  String
+  shop         String
+  mindestens16 Boolean   @map("mindestens_16")
+  erteiltAm    DateTime  @default(now()) @map("erteilt_am")
+  widerrufenAm DateTime? @map("widerrufen_am")
+
+  kundin Kundin? @relation(fields: [kundinId], references: [id], onDelete: Cascade)
+
+  @@index([kundinId])
+  @@map("einwilligung")
+  @@schema("identity")
+}
+
+model ShopVerknuepfung {
+  kundinId      String   @map("kundin_id")
+  shop          String
+  ersteNutzung  DateTime @default(now()) @map("erste_nutzung")
+  letzteNutzung DateTime @default(now()) @map("letzte_nutzung")
+
+  kundin Kundin @relation(fields: [kundinId], references: [id], onDelete: Cascade)
+
+  @@id([kundinId, shop])
+  @@map("shop_verknuepfung")
+  @@schema("identity")
+}
+
+/// Nur Entwicklung: Mails landen hier statt bei Brevo. Wird nach 24 Stunden gelöscht.
+model EntwicklungsMail {
+  id         Int      @id @default(autoincrement())
+  an         String
+  betreff    String
+  text       String
+  erstelltAm DateTime @default(now()) @map("erstellt_am")
+
+  @@map("entwicklungs_mail")
+  @@schema("identity")
+}
+
+// ---------------------------------------------------------------------------
+// Bereich body: Körpermaße. Nur der Benutzer ommetryx_body darf hier lesen.
+// Keine E-Mail, nur pseudonym_id. Werte verschlüsselt (OX_SCHLUESSEL_BODY). Keine Historie.
+// ---------------------------------------------------------------------------
+
+model Koerperprofil {
+  pseudonymId    String   @id @map("pseudonym_id")
+  /// Verschlüsseltes JSON: koerpergroesse, brust, huefte, taille?, altersgruppe?
+  daten          String
+  aktualisiertAm DateTime @updatedAt @map("aktualisiert_am")
+
+  @@map("koerperprofil")
+  @@schema("body")
 }
 
 // Von Hand gepflegte Ergänzungen (Artikelarten, Zusatzgewichte), als JSON.

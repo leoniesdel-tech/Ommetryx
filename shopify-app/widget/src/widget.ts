@@ -1,12 +1,15 @@
 // Ommetryx-Widget: Fenster im Shadow DOM, wird vom Lader beim Klick geladen.
-// Ablauf (Etappe 6): Einwilligung (Entwurf) → Maße → Passform → Ergebnis.
+// Ablauf: Einwilligung (Entwurf) → Maße → Passform → Ergebnis → optional „Maße speichern“ (E-Mail + Code).
+// Angemeldet: „Willkommen zurück“ → nur noch die Passform.
 //
-// Datenschutz: Maße bleiben nur im Arbeitsspeicher dieses Fensters, werden per POST an den
-// App Proxy geschickt und nirgends im Browser gespeichert. Keine Konsolen-Ausgaben.
+// Datenschutz: Maße bleiben im Arbeitsspeicher dieses Fensters und gehen per POST an den App Proxy.
+// Im Browser wird nur nach aktiver Anmeldung der Login-Token gespeichert (localStorage dieses Shops),
+// nie Maße oder E-Mail. Keine Konsolen-Ausgaben.
 
+import { ALTERSGRUPPEN, EINWILLIGUNGEN } from "../../app/kundin/texte";
 import { STIL } from "./stil";
 import { FELDER, pruefeEingaben, sicherheitInWorten } from "./eingaben";
-import type { Feld, Rohwerte } from "./eingaben";
+import type { Feld, Koerper, Rohwerte } from "./eingaben";
 
 type Passform = "koerpernah" | "regulaer" | "locker" | "oversized";
 const PASSFORMEN: [Passform, string][] = [
@@ -30,10 +33,41 @@ interface Ergebnis {
   begrenzt_durch_schnitt: boolean;
 }
 
-type Schritt = "laden" | "nicht_vermessen" | "einwilligung" | "masse" | "ergebnis" | "fehler";
+interface Profil extends Koerper {
+  altersgruppe?: string;
+}
+
+type Schritt = "laden" | "nicht_vermessen" | "einwilligung" | "willkommen" | "masse" | "ergebnis" | "speichern" | "code" | "fehler";
+
+const SPEICHER_SCHLUESSEL = "ommetryx-sitzung";
 
 const escape = (text: string) =>
   text.replace(/[&<>"']/g, (z) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[z]!);
+
+// localStorage kann gesperrt sein (privates Fenster, Einstellungen) – dann einfach ohne Anmeldung weiter.
+const tokenSpeicher = {
+  lesen(): string | null {
+    try {
+      return window.localStorage.getItem(SPEICHER_SCHLUESSEL);
+    } catch {
+      return null;
+    }
+  },
+  schreiben(token: string) {
+    try {
+      window.localStorage.setItem(SPEICHER_SCHLUESSEL, token);
+    } catch {
+      // ohne Speicher: Anmeldung gilt nur bis zum Schließen
+    }
+  },
+  loeschen() {
+    try {
+      window.localStorage.removeItem(SPEICHER_SCHLUESSEL);
+    } catch {
+      // nichts zu tun
+    }
+  },
+};
 
 class Widget {
   private host?: HTMLElement;
@@ -45,11 +79,18 @@ class Widget {
   private einwilligung = false;
   private alter16 = false;
   private roh: Rohwerte = {};
-  private feldFehler: Partial<Record<Feld, string>> = {};
+  private altersgruppe = "";
+  private feldFehler: Partial<Record<Feld | "email" | "code" | "profil", string>> = {};
   private passform: Passform = "regulaer";
   private ergebnis?: Ergebnis;
   private rechnet = false;
   private vorherigerUeberlauf = "";
+  /** Angemeldet: Token im Speicher und gültiges Profil auf dem Server. */
+  private token: string | null = null;
+  private profil?: Profil;
+  private profilEinwilligung = false;
+  private email = "";
+  private meldung = "";
 
   oeffnen(einstellungen: Einstellungen) {
     if (this.host) return;
@@ -57,6 +98,7 @@ class Widget {
     // Passform bei jedem Öffnen neu, vorbelegt „regulär“ (CLAUDE.md Abschnitt 6).
     this.passform = "regulaer";
     this.ergebnis = undefined;
+    this.meldung = "";
     this.schritt = "laden";
 
     // Eigenes Element statt <div>: Viele Themes (z. B. Dawn) haben „div:empty { display: none }“,
@@ -87,7 +129,7 @@ class Widget {
     this.wurzel.addEventListener("keydown", (e) => this.beiTaste(e as KeyboardEvent));
 
     this.zeichne();
-    void this.ladeArtikel();
+    void this.starte();
   }
 
   private schliessen() {
@@ -102,9 +144,11 @@ class Widget {
     };
     this.host = undefined;
     this.wurzel = undefined;
-    // Maße aus dem Speicher löschen.
+    // Maße und Eingaben aus dem Speicher löschen.
     this.roh = {};
+    this.profil = undefined;
     this.ergebnis = undefined;
+    this.email = "";
     if (ruhig || !ox) return entfernen();
     ox.classList.add("schliesst");
     window.setTimeout(entfernen, 220);
@@ -114,7 +158,17 @@ class Widget {
   // Server
   // -------------------------------------------------------------------------
 
-  private async ladeArtikel() {
+  private async post<T>(pfad: string, inhalt: unknown): Promise<{ status: number; daten: T }> {
+    const antwort = await fetch(`${this.einstellungen!.proxy}/${pfad}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(inhalt),
+    });
+    return { status: antwort.status, daten: (await antwort.json()) as T };
+  }
+
+  private async starte() {
     const e = this.einstellungen!;
     try {
       const antwort = await fetch(`${e.proxy}/artikel?produkt=${encodeURIComponent(e.produkt)}`, {
@@ -126,34 +180,79 @@ class Widget {
       if (!daten.vermessen) return this.wechsle("nicht_vermessen");
       this.taillePflicht = Boolean(daten.taillePflicht);
       this.tailleGewertet = Boolean(daten.tailleGewertet);
+
+      this.token = tokenSpeicher.lesen();
+      if (this.token) {
+        const { daten: konto } = await this.post<{ angemeldet: boolean; profil?: Profil | null }>("konto", {
+          aktion: "profil_laden",
+          token: this.token,
+        });
+        if (konto.angemeldet && konto.profil) {
+          this.profil = konto.profil;
+          this.uebernimmProfil(konto.profil);
+          return this.wechsle("willkommen");
+        }
+        this.token = null;
+        tokenSpeicher.loeschen();
+      }
       this.wechsle(this.einwilligung ? "masse" : "einwilligung");
     } catch {
       this.wechsle("fehler");
     }
   }
 
-  private async rechne() {
-    const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
-    if (!pruefung.ok) {
-      this.feldFehler = pruefung.fehler;
-      this.zeichne();
-      const erstes = FELDER.find((f) => pruefung.fehler[f.feld]);
-      if (erstes) this.wurzel?.getElementById(`ox-${erstes.feld}`)?.focus();
-      return;
+  private uebernimmProfil(p: Profil) {
+    this.roh = {
+      koerpergroesse: String(p.koerpergroesse).replace(".", ","),
+      brust: String(p.brust).replace(".", ","),
+      huefte: String(p.huefte).replace(".", ","),
+      ...(p.taille ? { taille: String(p.taille).replace(".", ",") } : {}),
+    };
+    this.altersgruppe = p.altersgruppe ?? "";
+  }
+
+  private async bestaetigeEinwilligung() {
+    try {
+      const { status } = await this.post("einwilligung", { version: EINWILLIGUNGEN.verarbeitung.version, mindestens16: true });
+      if (status !== 200) throw new Error("Antwort");
+      this.wechsle("masse");
+    } catch {
+      this.wechsle("fehler");
+    }
+  }
+
+  /** Rechnet die Empfehlung. Angemeldet ohne neue Eingabe: mit dem gespeicherten Profil (nur Token). */
+  private async rechne(mitEingaben: boolean) {
+    let koerper: Koerper | undefined;
+    if (mitEingaben) {
+      const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
+      if (!pruefung.ok) {
+        this.feldFehler = pruefung.fehler;
+        this.zeichne();
+        const erstes = FELDER.find((f) => pruefung.fehler[f.feld]);
+        if (erstes) this.wurzel?.getElementById(`ox-${erstes.feld}`)?.focus();
+        return;
+      }
+      koerper = pruefung.koerper;
     }
     this.feldFehler = {};
     this.rechnet = true;
     this.zeichne();
-    const e = this.einstellungen!;
     try {
-      const antwort = await fetch(`${e.proxy}/empfehlung`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ produkt: e.produkt, passform: this.passform, koerper: pruefung.koerper }),
-      });
-      if (!antwort.ok) throw new Error("Antwort");
-      this.ergebnis = (await antwort.json()) as Ergebnis;
+      // Angemeldet und Maße geändert: Profil überschreiben (keine Historie).
+      if (koerper && this.token && this.profil) {
+        const profil = this.mitAltersgruppe(koerper);
+        const { status } = await this.post("konto", { aktion: "profil_speichern", token: this.token, profil });
+        if (status === 200) this.profil = profil;
+      }
+      const inhalt = koerper ? { koerper } : { token: this.token };
+      const { status, daten } = await this.post<Ergebnis>("empfehlung", { produkt: this.einstellungen!.produkt, passform: this.passform, ...inhalt });
+      if (status === 401) {
+        this.abgemeldet();
+        return this.wechsle("einwilligung");
+      }
+      if (status !== 200) throw new Error("Antwort");
+      this.ergebnis = daten;
       this.rechnet = false;
       this.wechsle("ergebnis");
       this.sage(this.ansageText());
@@ -163,6 +262,76 @@ class Widget {
     }
   }
 
+  private mitAltersgruppe(k: Koerper): Profil {
+    return { ...k, ...(this.altersgruppe ? { altersgruppe: this.altersgruppe } : {}) };
+  }
+
+  private async fordereCodeAn() {
+    const feld = this.wurzel?.getElementById("ox-email") as HTMLInputElement | null;
+    this.email = (feld?.value ?? this.email).trim();
+    this.feldFehler = {};
+    if (!this.profilEinwilligung) this.feldFehler.profil = "Bitte bestätigen Sie die Einwilligung, damit wir Ihre Maße speichern dürfen.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email)) this.feldFehler.email = "Bitte geben Sie eine gültige E-Mail-Adresse ein.";
+    if (Object.keys(this.feldFehler).length > 0) return this.zeichne();
+    try {
+      const { status } = await this.post("konto", { aktion: "code_anfordern", email: this.email });
+      if (status !== 200) throw new Error("Antwort");
+      this.meldung = "";
+      this.wechsle("code");
+    } catch {
+      this.wechsle("fehler");
+    }
+  }
+
+  private async pruefeCode(code: string) {
+    const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
+    try {
+      const { status, daten } = await this.post<{ ok?: boolean; token?: string }>("konto", {
+        aktion: "code_pruefen",
+        email: this.email,
+        code,
+        einwilligung: { version: EINWILLIGUNGEN.profil.version, mindestens16: true },
+        ...(pruefung.ok ? { profil: this.mitAltersgruppe(pruefung.koerper) } : {}),
+      });
+      if (status === 401) {
+        this.feldFehler = { code: "Der Code stimmt nicht oder ist abgelaufen. Bitte prüfen Sie ihn oder fordern Sie einen neuen an." };
+        return this.zeichne();
+      }
+      if (status !== 200 || !daten.token) throw new Error("Antwort");
+      this.token = daten.token;
+      tokenSpeicher.schreiben(daten.token);
+      if (pruefung.ok) this.profil = this.mitAltersgruppe(pruefung.koerper);
+      this.email = "";
+      this.meldung = "Ihre Maße sind gespeichert. Beim nächsten Mal wählen Sie nur noch die Passform.";
+      this.wechsle("ergebnis");
+      this.sage(this.meldung);
+    } catch {
+      this.wechsle("fehler");
+    }
+  }
+
+  private async melddeAb() {
+    const token = this.token;
+    this.abgemeldet();
+    if (token) {
+      try {
+        await this.post("konto", { aktion: "abmelden", token });
+      } catch {
+        // lokal ist schon abgemeldet
+      }
+    }
+    this.roh = {};
+    this.einwilligung = false;
+    this.alter16 = false;
+    this.wechsle("einwilligung");
+  }
+
+  private abgemeldet() {
+    this.token = null;
+    this.profil = undefined;
+    tokenSpeicher.loeschen();
+  }
+
   // -------------------------------------------------------------------------
   // Ereignisse
   // -------------------------------------------------------------------------
@@ -170,39 +339,64 @@ class Widget {
   private beiKlick(e: Event) {
     const ziel = (e.target as HTMLElement).closest<HTMLElement>("[data-aktion]");
     if (!ziel) return;
-    const aktion = ziel.dataset.aktion;
-    if (aktion === "schliessen") this.schliessen();
-    if (aktion === "zur-einwilligung-weiter" && this.einwilligung && this.alter16) this.wechsle("masse");
-    if (aktion === "masse-aendern") this.wechsle("masse");
-    if (aktion === "erneut") {
-      this.wechsle("laden");
-      void this.ladeArtikel();
+    switch (ziel.dataset.aktion) {
+      case "schliessen":
+        return this.schliessen();
+      case "zur-einwilligung-weiter":
+        if (this.einwilligung && this.alter16) void this.bestaetigeEinwilligung();
+        return;
+      case "masse-aendern":
+        return this.wechsle("masse");
+      case "erneut":
+        this.wechsle("laden");
+        return void this.starte();
+      case "willkommen-rechnen":
+        return void this.rechne(false);
+      case "speichern":
+        this.feldFehler = {};
+        return this.wechsle("speichern");
+      case "code-senden":
+        return void this.fordereCodeAn();
+      case "code-erneut":
+        this.meldung = "Wir haben Ihnen einen neuen Code geschickt.";
+        return void this.fordereCodeAn();
+      case "andere-email":
+        return this.wechsle("speichern");
+      case "abmelden":
+        return void this.melddeAb();
     }
   }
 
   private beiAenderung(e: Event) {
-    const feld = e.target as HTMLInputElement;
-    if (feld.name === "einwilligung") this.einwilligung = feld.checked;
-    if (feld.name === "alter16") this.alter16 = feld.checked;
+    const feld = e.target as HTMLInputElement | HTMLSelectElement;
+    if (feld instanceof HTMLInputElement && feld.name === "einwilligung") this.einwilligung = feld.checked;
+    if (feld instanceof HTMLInputElement && feld.name === "alter16") this.alter16 = feld.checked;
+    if (feld instanceof HTMLInputElement && feld.name === "profil-einwilligung") this.profilEinwilligung = feld.checked;
     if (feld.name === "einwilligung" || feld.name === "alter16") {
       const weiter = this.wurzel?.querySelector<HTMLButtonElement>("[data-aktion='zur-einwilligung-weiter']");
       if (weiter) weiter.disabled = !(this.einwilligung && this.alter16);
     }
+    if (feld.name === "altersgruppe") this.altersgruppe = feld.value;
     if (feld.name === "passform") {
       this.passform = feld.value as Passform;
-      // Im Ergebnis rechnet der Umschalter sofort neu.
-      if (this.schritt === "ergebnis") void this.rechne();
+      // Im Ergebnis rechnet der Umschalter sofort neu (angemeldet mit dem Profil).
+      if (this.schritt === "ergebnis") void this.rechne(!this.token);
     }
   }
 
   private beiAbsenden(e: Event) {
     e.preventDefault();
     const formular = e.target as HTMLFormElement;
+    if (formular.dataset.formular === "code") {
+      const code = (formular.elements.namedItem("code") as HTMLInputElement).value;
+      return void this.pruefeCode(code);
+    }
+    if (formular.dataset.formular === "speichern") return void this.fordereCodeAn();
     for (const { feld } of FELDER) {
       const eingabe = formular.elements.namedItem(feld) as HTMLInputElement | null;
       if (eingabe) this.roh[feld] = eingabe.value;
     }
-    void this.rechne();
+    void this.rechne(true);
   }
 
   private beiTaste(e: KeyboardEvent) {
@@ -213,7 +407,7 @@ class Widget {
     }
     if (e.key !== "Tab" || !this.wurzel) return;
     // Fokus bleibt im Fenster.
-    const fokussierbar = [...this.wurzel.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), [tabindex='-1']")].filter(
+    const fokussierbar = [...this.wurzel.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select, [tabindex='-1']")].filter(
       (el) => el.offsetParent !== null || el.tagName === "H2",
     );
     const erstes = fokussierbar[0];
@@ -273,10 +467,16 @@ class Widget {
           <button type="button" class="sekundaer" data-aktion="schliessen">Schließen</button>`;
       case "einwilligung":
         return this.htmlEinwilligung();
+      case "willkommen":
+        return this.htmlWillkommen();
       case "masse":
         return this.htmlMasse();
       case "ergebnis":
         return this.htmlErgebnis();
+      case "speichern":
+        return this.htmlSpeichern();
+      case "code":
+        return this.htmlCode();
     }
   }
 
@@ -288,15 +488,24 @@ class Widget {
       <div class="karte">
         <label class="wahl">
           <input type="checkbox" name="einwilligung" ${this.einwilligung ? "checked" : ""} />
-          <span>Ich willige ein, dass Ommetryx meine Körpermaße verarbeitet, um mir eine Größe zu empfehlen. Körpermaße können Rückschlüsse auf meine Gesundheit zulassen. Die Maße werden nicht gespeichert. Ich kann die Einwilligung jederzeit widerrufen.</span>
+          <span>${escape(EINWILLIGUNGEN.verarbeitung.text)}</span>
         </label>
         <label class="wahl">
           <input type="checkbox" name="alter16" ${this.alter16 ? "checked" : ""} />
-          <span>Ich bin mindestens 16 Jahre alt.</span>
+          <span>${escape(EINWILLIGUNGEN.alter16.text)}</span>
         </label>
       </div>
       <button type="button" class="primaer" data-aktion="zur-einwilligung-weiter" ${bereit ? "" : "disabled"}>Weiter</button>
       <button type="button" class="link" data-aktion="schliessen">Ohne Einwilligung: Größentabelle des Shops nutzen</button>`;
+  }
+
+  private htmlWillkommen() {
+    return `<h2 id="ox-titel" tabindex="-1">Willkommen zurück</h2>
+      <p>Ihre Maße sind gespeichert. Wählen Sie nur noch, wie dieses Teil sitzen soll.</p>
+      <form novalidate data-formular="willkommen">${this.htmlPassform()}</form>
+      <button type="button" class="primaer" data-aktion="willkommen-rechnen" ${this.rechnet ? "disabled" : ""}>${this.rechnet ? "Wird berechnet …" : "Größe berechnen"}</button>
+      <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
+      <button type="button" class="link" data-aktion="abmelden">Abmelden</button>`;
   }
 
   private htmlFeld(feld: Feld, beschriftung: string, zusatz: string) {
@@ -325,11 +534,18 @@ class Widget {
     const taille = this.taillePflicht ? "" : " (empfohlen)";
     return `<h2 id="ox-titel" tabindex="-1">Ihre Maße</h2>
       <p class="leise">Messen Sie mit einem Maßband, am besten zu zweit. Normal ausatmen, Band nicht straff ziehen.</p>
-      <form novalidate>
+      <form novalidate data-formular="masse">
         ${this.htmlFeld("koerpergroesse", "Körpergröße", "")}
         ${this.htmlFeld("brust", "Brustumfang", "")}
         ${this.htmlFeld("huefte", "Hüftumfang", "")}
         ${this.tailleGewertet || this.taillePflicht ? this.htmlFeld("taille", "Taillenumfang", taille) : ""}
+        <div class="feld">
+          <label for="ox-altersgruppe">Altersgruppe (optional)</label>
+          <select id="ox-altersgruppe" name="altersgruppe">
+            <option value="">Keine Angabe</option>
+            ${ALTERSGRUPPEN.map((g) => `<option value="${g}" ${this.altersgruppe === g ? "selected" : ""}>${g} Jahre</option>`).join("")}
+          </select>
+        </div>
         ${this.htmlPassform()}
         <button type="submit" class="primaer" ${this.rechnet ? "disabled" : ""}>${this.rechnet ? "Wird berechnet …" : "Größe berechnen"}</button>
       </form>`;
@@ -349,12 +565,60 @@ class Widget {
           ? `<p>Leider passt Ihnen keine der verfügbaren Größen gut genug. Bitte nutzen Sie die Größentabelle des Shops.</p>`
           : `<p>Für Ihre Maße können wir bei diesem Artikel keine sichere Größe empfehlen. Bitte nutzen Sie die Größentabelle des Shops.</p>`;
 
+    const konto = this.token
+      ? `${this.meldung ? `<p class="karte" role="status">${escape(this.meldung)}</p>` : `<p class="leise">Ihre Maße sind gespeichert.</p>`}
+         <button type="button" class="link" data-aktion="abmelden">Abmelden</button>`
+      : `<button type="button" class="sekundaer" data-aktion="speichern">Maße für den nächsten Einkauf speichern</button>`;
+
     return `<h2 id="ox-titel" tabindex="-1">Ihre Empfehlung</h2>
       ${kopf}
-      <form novalidate>${this.htmlPassform()}</form>
+      <form novalidate data-formular="ergebnis">${this.htmlPassform()}</form>
       ${this.rechnet ? `<p class="leise">Wird neu berechnet …</p>` : ""}
       <button type="button" class="primaer" data-aktion="schliessen">Fertig</button>
-      <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>`;
+      <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
+      ${konto}`;
+  }
+
+  private htmlSpeichern() {
+    const f = this.feldFehler;
+    return `<h2 id="ox-titel" tabindex="-1">Maße speichern</h2>
+      <span class="entwurf">Entwurf · Text wird noch rechtlich geprüft</span>
+      <p>Mit einem Profil müssen Sie beim nächsten Einkauf nicht neu messen – auch in anderen Shops mit Ommetryx. Sie melden sich ohne Passwort an: Wir schicken Ihnen einen Code per E-Mail.</p>
+      <form novalidate data-formular="speichern">
+        <div class="karte">
+          <label class="wahl">
+            <input type="checkbox" name="profil-einwilligung" ${this.profilEinwilligung ? "checked" : ""} ${f.profil ? `aria-invalid="true" aria-describedby="ox-profil-fehler"` : ""} />
+            <span>${escape(EINWILLIGUNGEN.profil.text)}</span>
+          </label>
+          ${f.profil ? `<span class="fehler" id="ox-profil-fehler">${escape(f.profil)}</span>` : ""}
+        </div>
+        <div class="feld">
+          <label for="ox-email">E-Mail-Adresse</label>
+          <input id="ox-email" name="email" type="email" inputmode="email" autocomplete="email" value="${escape(this.email)}"
+            ${f.email ? `aria-invalid="true" aria-describedby="ox-email-fehler"` : ""} />
+          ${f.email ? `<span class="fehler" id="ox-email-fehler">${escape(f.email)}</span>` : ""}
+        </div>
+        <button type="submit" class="primaer">Code senden</button>
+      </form>
+      <button type="button" class="sekundaer" data-aktion="masse-aendern">Zurück</button>`;
+  }
+
+  private htmlCode() {
+    const f = this.feldFehler;
+    return `<h2 id="ox-titel" tabindex="-1">Code eingeben</h2>
+      <p>Wir haben einen 6-stelligen Code an <strong>${escape(this.email)}</strong> geschickt. Er ist 10 Minuten gültig.</p>
+      ${this.meldung ? `<p class="leise" role="status">${escape(this.meldung)}</p>` : ""}
+      <form novalidate data-formular="code">
+        <div class="feld">
+          <label for="ox-code">Code aus der E-Mail</label>
+          <input id="ox-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7"
+            ${f.code ? `aria-invalid="true" aria-describedby="ox-code-fehler"` : ""} />
+          ${f.code ? `<span class="fehler" id="ox-code-fehler">${escape(f.code)}</span>` : ""}
+        </div>
+        <button type="submit" class="primaer">Bestätigen</button>
+      </form>
+      <button type="button" class="link" data-aktion="code-erneut">Code erneut senden</button>
+      <button type="button" class="link" data-aktion="andere-email">Andere E-Mail-Adresse verwenden</button>`;
   }
 }
 

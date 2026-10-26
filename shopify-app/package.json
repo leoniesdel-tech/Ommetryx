@@ -19,12 +19,13 @@
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
     "test": "vitest run",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "prisma migrate dev && node scripts/db-rechte.mjs",
     "db:startwerte": "node prisma/startwerte.ts",
     "db:studio": "prisma studio",
     "team:einladen": "tsx scripts/team-einladen.ts",
     "widget:bauen": "node widget/bauen.mjs",
-    "widget:beobachten": "node widget/bauen.mjs --beobachten"
+    "widget:beobachten": "node widget/bauen.mjs --beobachten",
+    "db:rechte": "node scripts/db-rechte.mjs"
   },
   "type": "module",
   "engines": {
