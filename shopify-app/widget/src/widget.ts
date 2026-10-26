@@ -59,8 +59,11 @@ class Widget {
     this.ergebnis = undefined;
     this.schritt = "laden";
 
-    this.host = document.createElement("div");
+    // Eigenes Element statt <div>: Viele Themes (z. B. Dawn) haben „div:empty { display: none }“,
+    // und ein Shadow-Host gilt für das Theme als leer. Die Inline-Regel schützt vor weiteren Theme-Stilen.
+    this.host = document.createElement("ommetryx-widget");
     this.host.id = "ommetryx-widget";
+    this.host.setAttribute("style", "display:block !important; position:static !important;");
     this.wurzel = this.host.attachShadow({ mode: "open" });
     this.wurzel.innerHTML = `<style>${STIL}</style>
       <div class="ox" lang="de">

@@ -256,9 +256,14 @@ Befehle (im Ordner `packages/empfehlung`):
 - App Proxy `/apps/ommetryx/*` → `/proxy/*`: `proxy.artikel` (GET, vermessen?) und `proxy.empfehlung` (POST, Maße nur im JSON-Inhalt). Signaturprüfung mit `authenticate.public.appProxy`, nichts gespeichert, keine Maße in Antworten bei Fehlern. Scope `write_app_proxy` ergänzt.
 - Widget-Ablauf: Einwilligung (**Entwurf**, nichts gespeichert, Nachweis kommt in Etappe 7) → Maße → Passform → Ergebnis mit Passform-Umschalter. Shadow DOM, Fokus-Falle, Esc, Live-Region, `prefers-reduced-motion`. Schrift vorerst Systemschrift (Sora fehlt noch).
 - Beim Speichern in `/intern` wird das Metafeld `$app.vermessen` gesetzt (Testbluse ist neu gespeichert).
-- **Stand am 23.10. abends:** Block im Theme-Editor per Direktlink geöffnet; Leonie muss ihn noch über die Variantenauswahl ziehen und speichern. Danach: Testbluse im Shop öffnen (Shop-Passwort unter Onlineshop → Einstellungen), Widget mit 168/96/102 testen → 40 erwartet, Passform umschalten, ein nicht vermessenes Produkt prüfen. Dann Commit/Push und Etappe 6 abschließen.
+- **Getestet am 26.10. (Ende-zu-Ende im eingebauten Browser):** Testbluse, 168/96/102, regulär → **40**, Sicherheit hoch; „locker“ → 44 mit Hinweis „anders geschnitten“; nicht vermessenes Produkt → kein Button. Block steht im Live-Theme „test-data“ und im Vorschau-Theme über der Variantenauswahl.
+- **Wichtig für Themes:** Dawn & Co. haben `div:empty { display: none }`. Deshalb ist der Widget-Host ein eigenes Element `<ommetryx-widget>` mit Inline-`display:block !important`.
+- **Block-Kennung im Theme:** `shopify://apps/ommetryx/blocks/groessenberater/01a1688c-5c40-7d4e-9917-d795ab3c4677` (nicht die `uid` aus `shopify.extension.toml`!). Vorlage bearbeiten: `shopify theme pull/push --only templates/product.json --path C:/Projekte/ommetryx/.theme-arbeit` (Ordner ist in `.gitignore`; Push ins Live-Theme nur mit Leonies OK).
 - Direktlink Theme-Editor: `https://ommetryx-test.myshopify.com/admin/themes/current/editor?template=product&addAppBlockId=afd273d42cc347f2f3caddd2a721f864/groessenberater&target=mainSection`
-- `shopify app dev` fragt beim Start nach dem Shop-Passwort (Besucherschutz des Test-Shops).
+- Neue Produkte per API sind **nicht automatisch im Onlineshop veröffentlicht** (Testbluse per `publishablePublish` veröffentlicht, Publication „Online Store“ `gid://shopify/Publication/368984097103`).
+- **App starten:** `shopify app dev --path C:/Projekte/ommetryx/shopify-app --store ommetryx-test.myshopify.com --store-password <Shop-Passwort>`. Shop-Passwort steht in Onlineshop → Einstellungen → „Store access“ (kein Geheimnis, nicht Leonies Login). Lokale Vorschau ohne Passwortseite: `http://127.0.0.1:9293/products/testbluse-leinen` (fragt gelegentlich doch nach dem Shop-Passwort).
+- **Windows-Falle:** Stürzt `shopify app dev` ab, bleiben `react-router dev`-Prozesse übrig und sperren die Prisma-DLL (EPERM beim nächsten Start). Dann diese Node-Prozesse beenden.
+- PowerShell 5.1 verschluckt `"` in Argumenten an native Programme → GraphQL für `shopify store execute` immer per `--query-file`.
 
 **Technik (vorgeschlagen, von Leonie nicht ausdrücklich bestätigt – vorerst so umsetzen)**
 - Login gilt pro Shop-Domain: In einem neuen Shop meldet sich die Kundin einmal per Code an.
@@ -280,6 +285,7 @@ Bis zur Klärung nicht raten.
    - „Knapp“ heißt (zweitbester − bester Score) ÷ zweitbester Score < 10 %.
    - Unter 60 Konfidenz: `recommended_size` ist leer, nur die Zonen werden geliefert.
    - Ärmellänge „zu kurz“ zählt mit `faktor_zu_eng` (2).
+4c. **Begrenzung durch den Schnitt reicht nicht immer:** Testbluse (Schnitt regulär), Wunsch „locker“, Brust 96 → v3 begrenzt die Ziel-Mitte auf Schnitt-Mitte + G, nach Umrechnung und straffreier Zone ±G/2 wird aber **44 statt 40** empfohlen, also zwei Größensprünge. v3 will „höchstens ein Größensprung“. Soll die Begrenzung zusätzlich auf die empfohlene Größe wirken (höchstens eine Größe neben der Größe für den Schnitt)?
 
 **Leonie (hat Zeit)**
 5. **Automatischer Schnitt:** In Shopify gibt es keine einheitliche Größentabelle. Vorschlag: Das Team trägt die Körpermaß-Tabelle einmal pro Marke ein, sonst wird der Schnitt manuell gesetzt. Nötig in Etappe 5.
