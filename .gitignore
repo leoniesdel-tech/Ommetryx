@@ -34,3 +34,6 @@ desktop.ini
 
 # Office-Sperrdateien
 ~$*
+
+# Arbeitskopien aus dem Test-Theme (nicht ins Repo)
+.theme-arbeit/
