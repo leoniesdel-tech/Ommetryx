@@ -1,6 +1,8 @@
 // Ommetryx-Widget: Fenster im Shadow DOM, wird vom Lader beim Klick geladen.
-// Ablauf: Einwilligung (Entwurf) → Maße → Passform → Ergebnis → optional „Maße speichern“ (E-Mail + Code).
-// Angemeldet: „Willkommen zurück“ → nur noch die Passform.
+// Ablauf: Einwilligung (Entwurf) → Mess-Schritte (je ein Maß, Tipp, Plausibilität) → Passform
+//         → Ladebildschirm → Ergebnis → optional „Maße speichern“ (E-Mail + Code).
+// Angemeldet: „Willkommen zurück“ → Passform → kurzer Ladebildschirm → Ergebnis.
+// Vorlagen: Figma „Design v1 · Endkunde“ E03–E06, E17, E34, E36/E36b und die Bewegungs-Spezifikation.
 //
 // Datenschutz: Maße bleiben im Arbeitsspeicher dieses Fensters und gehen per POST an den App Proxy.
 // Im Browser wird nur nach aktiver Anmeldung der Login-Token gespeichert (localStorage dieses Shops),
@@ -8,8 +10,12 @@
 
 import { ALTERSGRUPPEN, EINWILLIGUNGEN } from "../../app/kundin/texte";
 import { STIL } from "./stil";
-import { FELDER, pruefeEingaben, sicherheitInWorten } from "./eingaben";
+import { FELDER, alsZahl, pruefeEingaben, sicherheitInWorten } from "./eingaben";
 import type { Feld, Koerper, Rohwerte } from "./eingaben";
+import { logoHtml } from "./logo";
+import { pruefePlausibel } from "./plausi";
+import type { Hinweis, PlausiKonfig } from "./plausi";
+import { MESS_HINWEIS, SCHRITTE } from "./texte";
 
 type Passform = "koerpernah" | "regulaer" | "locker" | "oversized";
 const PASSFORMEN: [Passform, string][] = [
@@ -37,12 +43,46 @@ interface Profil extends Koerper {
   altersgruppe?: string;
 }
 
-type Schritt = "laden" | "nicht_vermessen" | "einwilligung" | "willkommen" | "masse" | "ergebnis" | "speichern" | "code" | "fehler";
+type Schritt =
+  | "laden"
+  | "nicht_vermessen"
+  | "einwilligung"
+  | "willkommen"
+  | "messen"
+  | "passform"
+  | "berechnung"
+  | "ergebnis"
+  | "speichern"
+  | "code"
+  | "fehler";
 
 const SPEICHER_SCHLUESSEL = "ommetryx-sitzung";
+const STANDARD_PLAUSI: PlausiKonfig = { abweichung_cm: 6, huefte_minus_brust_cm: 8, brust_minus_taille_cm: 16 };
+
+// Ordner der Widget-Dateien (Schrift, Logo) – derselbe wie der dieses Skripts.
+const BASIS = (() => {
+  const skript = document.currentScript as HTMLScriptElement | null;
+  return skript?.src ? skript.src.replace(/[?#].*$/, "").replace(/[^/]*$/, "") : "";
+})();
+
+/**
+ * Die Schrift muss im Dokument angemeldet werden; @font-face im Shadow DOM greift in Chrome nicht.
+ * Sora steckt eingebettet in ommetryx-schrift.css (Theme-Erweiterungen erlauben keine .woff2-Dateien)
+ * und lädt erst beim Öffnen des Widgets.
+ */
+function ladeSchrift() {
+  if (!BASIS || document.getElementById("ommetryx-schrift")) return;
+  const link = document.createElement("link");
+  link.id = "ommetryx-schrift";
+  link.rel = "stylesheet";
+  link.href = `${BASIS}ommetryx-schrift.css`;
+  document.head.appendChild(link);
+}
 
 const escape = (text: string) =>
   text.replace(/[&<>"']/g, (z) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[z]!);
+const warte = (ms: number) => new Promise((fertig) => window.setTimeout(fertig, ms));
+const ruhig = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // localStorage kann gesperrt sein (privates Fenster, Einstellungen) – dann einfach ohne Anmeldung weiter.
 const tokenSpeicher = {
@@ -76,6 +116,7 @@ class Widget {
   private schritt: Schritt = "laden";
   private taillePflicht = false;
   private tailleGewertet = false;
+  private plausi: PlausiKonfig = STANDARD_PLAUSI;
   private einwilligung = false;
   private alter16 = false;
   private roh: Rohwerte = {};
@@ -83,23 +124,32 @@ class Widget {
   private feldFehler: Partial<Record<Feld | "email" | "code" | "profil", string>> = {};
   private passform: Passform = "regulaer";
   private ergebnis?: Ergebnis;
-  private rechnet = false;
   private vorherigerUeberlauf = "";
-  /** Angemeldet: Token im Speicher und gültiges Profil auf dem Server. */
   private token: string | null = null;
   private profil?: Profil;
   private profilEinwilligung = false;
   private email = "";
   private meldung = "";
   private meinUrl: string | null = null;
+  // Mess-Schritte
+  private messIndex = 0;
+  private hinweis: { feld: Feld; hinweis: NonNullable<Hinweis> } | null = null;
+  /** „Stimmt so“ bestätigte Werte je Feld – bei gleichem Wert nicht noch einmal nachfragen. */
+  private bestaetigt: Partial<Record<Feld, string>> = {};
+  // Ladebildschirm
+  private abbruch?: AbortController;
+  private zurueckNachAbbruch: Schritt = "passform";
+  private reveal = false;
 
   oeffnen(einstellungen: Einstellungen) {
     if (this.host) return;
+    ladeSchrift();
     this.einstellungen = einstellungen;
     // Passform bei jedem Öffnen neu, vorbelegt „regulär“ (CLAUDE.md Abschnitt 6).
     this.passform = "regulaer";
     this.ergebnis = undefined;
     this.meldung = "";
+    this.hinweis = null;
     this.schritt = "laden";
 
     // Eigenes Element statt <div>: Viele Themes (z. B. Dawn) haben „div:empty { display: none }“,
@@ -112,10 +162,7 @@ class Widget {
       <div class="ox" lang="de">
         <div class="abdunklung" data-aktion="schliessen"></div>
         <div class="fenster" role="dialog" aria-modal="true" aria-labelledby="ox-titel">
-          <div class="kopf">
-            <span class="marke">Ommetryx · Größenberatung</span>
-            <button type="button" class="schliessen" data-aktion="schliessen" aria-label="Größenberatung schließen">×</button>
-          </div>
+          <div data-kopf></div>
           <div class="inhalt" data-inhalt></div>
           <div class="nur-vorleser" aria-live="polite" data-ansage></div>
         </div>
@@ -136,8 +183,8 @@ class Widget {
   private schliessen() {
     const host = this.host;
     if (!host || !this.wurzel) return;
+    this.abbruch?.abort();
     const ox = this.wurzel.querySelector(".ox");
-    const ruhig = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const entfernen = () => {
       host.remove();
       document.documentElement.style.overflow = this.vorherigerUeberlauf;
@@ -147,10 +194,11 @@ class Widget {
     this.wurzel = undefined;
     // Maße und Eingaben aus dem Speicher löschen.
     this.roh = {};
+    this.bestaetigt = {};
     this.profil = undefined;
     this.ergebnis = undefined;
     this.email = "";
-    if (ruhig || !ox) return entfernen();
+    if (ruhig() || !ox) return entfernen();
     ox.classList.add("schliesst");
     window.setTimeout(entfernen, 220);
   }
@@ -159,12 +207,13 @@ class Widget {
   // Server
   // -------------------------------------------------------------------------
 
-  private async post<T>(pfad: string, inhalt: unknown): Promise<{ status: number; daten: T }> {
+  private async post<T>(pfad: string, inhalt: unknown, signal?: AbortSignal): Promise<{ status: number; daten: T }> {
     const antwort = await fetch(`${this.einstellungen!.proxy}/${pfad}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       credentials: "same-origin",
       body: JSON.stringify(inhalt),
+      signal,
     });
     return { status: antwort.status, daten: (await antwort.json()) as T };
   }
@@ -176,12 +225,19 @@ class Widget {
         headers: { Accept: "application/json" },
         credentials: "same-origin",
       });
-      const daten = (await antwort.json()) as { vermessen?: boolean; taillePflicht?: boolean; tailleGewertet?: boolean; meinUrl?: string | null };
+      const daten = (await antwort.json()) as {
+        vermessen?: boolean;
+        taillePflicht?: boolean;
+        tailleGewertet?: boolean;
+        meinUrl?: string | null;
+        plausibilitaet?: PlausiKonfig;
+      };
       if (!antwort.ok) throw new Error("Antwort");
       if (!daten.vermessen) return this.wechsle("nicht_vermessen");
       this.taillePflicht = Boolean(daten.taillePflicht);
       this.tailleGewertet = Boolean(daten.tailleGewertet);
       this.meinUrl = daten.meinUrl && daten.meinUrl.startsWith("https://") ? daten.meinUrl : null;
+      if (daten.plausibilitaet) this.plausi = daten.plausibilitaet;
 
       this.token = tokenSpeicher.lesen();
       if (this.token) {
@@ -197,18 +253,19 @@ class Widget {
         this.token = null;
         tokenSpeicher.loeschen();
       }
-      this.wechsle(this.einwilligung ? "masse" : "einwilligung");
+      this.wechsle(this.einwilligung ? "messen" : "einwilligung");
     } catch {
       this.wechsle("fehler");
     }
   }
 
   private uebernimmProfil(p: Profil) {
+    const komma = (n: number) => String(n).replace(".", ",");
     this.roh = {
-      koerpergroesse: String(p.koerpergroesse).replace(".", ","),
-      brust: String(p.brust).replace(".", ","),
-      huefte: String(p.huefte).replace(".", ","),
-      ...(p.taille ? { taille: String(p.taille).replace(".", ",") } : {}),
+      koerpergroesse: komma(p.koerpergroesse),
+      brust: komma(p.brust),
+      huefte: komma(p.huefte),
+      ...(p.taille ? { taille: komma(p.taille) } : {}),
     };
     this.altersgruppe = p.altersgruppe ?? "";
   }
@@ -217,51 +274,113 @@ class Widget {
     try {
       const { status } = await this.post("einwilligung", { version: EINWILLIGUNGEN.verarbeitung.version, mindestens16: true });
       if (status !== 200) throw new Error("Antwort");
-      this.wechsle("masse");
+      this.messIndex = 0;
+      this.wechsle("messen");
     } catch {
       this.wechsle("fehler");
     }
   }
 
-  /** Rechnet die Empfehlung. Angemeldet ohne neue Eingabe: mit dem gespeicherten Profil (nur Token). */
-  private async rechne(mitEingaben: boolean) {
+  /**
+   * Berechnung mit Ladebildschirm (Figma E36/E36b): drei Etappen, jede beginnt erst, wenn ihr Schritt fertig ist.
+   * Erstes Mal je ca. 0,5 s (gesamt 1,2–2 s), wiederkehrend kurz (gesamt 0,6–0,8 s). Abbrechen ist möglich.
+   */
+  private async berechne(mitEingaben: boolean) {
     let koerper: Koerper | undefined;
     if (mitEingaben) {
       const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
       if (!pruefung.ok) {
+        // Sollte durch die Schritte nicht vorkommen – zur Sicherheit zum ersten fehlerhaften Schritt.
         this.feldFehler = pruefung.fehler;
-        this.zeichne();
-        const erstes = FELDER.find((f) => pruefung.fehler[f.feld]);
-        if (erstes) this.wurzel?.getElementById(`ox-${erstes.feld}`)?.focus();
-        return;
+        const index = this.messFelder().findIndex((f) => pruefung.fehler[f]);
+        this.messIndex = Math.max(0, index);
+        return this.wechsle("messen");
       }
       koerper = pruefung.koerper;
     }
-    this.feldFehler = {};
-    this.rechnet = true;
-    this.zeichne();
+
+    this.zurueckNachAbbruch = this.schritt === "willkommen" ? "willkommen" : "passform";
+    const kurz = !mitEingaben;
+    const etappe = ruhig() ? 150 : kurz ? 230 : 500;
+    this.abbruch = new AbortController();
+    const signal = this.abbruch.signal;
+    this.wechsle("berechnung");
+    this.setzeEtappe(0, etappe);
+
     try {
-      // Angemeldet und Maße geändert: Profil überschreiben (keine Historie).
-      if (koerper && this.token && this.profil) {
-        const profil = this.mitAltersgruppe(koerper);
-        const { status } = await this.post("konto", { aktion: "profil_speichern", token: this.token, profil });
-        if (status === 200) this.profil = profil;
-      }
-      const inhalt = koerper ? { koerper } : { token: this.token };
-      const { status, daten } = await this.post<Ergebnis>("empfehlung", { produkt: this.einstellungen!.produkt, passform: this.passform, ...inhalt });
+      const anfrage = (async () => {
+        // Angemeldet und Maße geändert: Profil überschreiben (keine Historie).
+        if (koerper && this.token && this.profil) {
+          const profil = this.mitAltersgruppe(koerper);
+          const { status } = await this.post("konto", { aktion: "profil_speichern", token: this.token, profil }, signal);
+          if (status === 200) this.profil = profil;
+        }
+        const inhalt = koerper ? { koerper } : { token: this.token };
+        return this.post<Ergebnis>("empfehlung", { produkt: this.einstellungen!.produkt, passform: this.passform, ...inhalt }, signal);
+      })();
+
+      await warte(etappe);
+      if (signal.aborted) return;
+      this.setzeEtappe(1, etappe);
+      await warte(etappe);
+      if (signal.aborted) return;
+      this.setzeEtappe(2, etappe);
+      const { status, daten } = await anfrage;
+      if (signal.aborted) return;
       if (status === 401) {
         this.abgemeldet();
         return this.wechsle("einwilligung");
       }
       if (status !== 200) throw new Error("Antwort");
+      await warte(etappe);
+      if (signal.aborted) return;
+      this.setzeEtappe(3, etappe);
+      await warte(ruhig() ? 0 : 350);
+      if (signal.aborted) return;
+
       this.ergebnis = daten;
-      this.rechnet = false;
+      this.reveal = !ruhig();
       this.wechsle("ergebnis");
+      this.reveal = false;
       this.sage(this.ansageText());
     } catch {
-      this.rechnet = false;
+      if (signal.aborted) return;
       this.wechsle("fehler");
     }
+  }
+
+  /** Passform-Umschalter im Ergebnis: direkt neu rechnen (angemeldet mit dem gespeicherten Profil). */
+  private async rechneSofort() {
+    const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
+    const inhalt = this.token && this.profil ? { token: this.token } : pruefung.ok ? { koerper: pruefung.koerper } : null;
+    if (!inhalt) return;
+    try {
+      const { status, daten } = await this.post<Ergebnis>("empfehlung", { produkt: this.einstellungen!.produkt, passform: this.passform, ...inhalt });
+      if (status !== 200) throw new Error("Antwort");
+      this.ergebnis = daten;
+      this.zeichne();
+      this.wurzel?.querySelector<HTMLInputElement>(`input[name=passform][value=${this.passform}]`)?.focus();
+      this.sage(this.ansageText());
+    } catch {
+      this.wechsle("fehler");
+    }
+  }
+
+  /** Aktualisiert Logo-Stufen und Liste, ohne neu zu zeichnen (sonst würden Übergänge neu starten). */
+  private setzeEtappe(etappe: number, dauer: number) {
+    const w = this.wurzel;
+    if (!w) return;
+    w.querySelector<HTMLElement>(".logo-innen")?.style.setProperty("--etappe", `${dauer}ms`);
+    w.querySelectorAll<HTMLElement>(".stufe").forEach((stufe, i) => stufe.classList.toggle("zeigen", i <= etappe));
+    w.querySelectorAll<HTMLElement>(".schritte-liste li").forEach((li, i) => {
+      li.classList.toggle("fertig", i < etappe);
+      li.classList.toggle("aktiv", i === etappe);
+    });
+  }
+
+  private brecheAb() {
+    this.abbruch?.abort();
+    this.wechsle(this.zurueckNachAbbruch);
   }
 
   private mitAltersgruppe(k: Koerper): Profil {
@@ -278,7 +397,6 @@ class Widget {
     try {
       const { status } = await this.post("konto", { aktion: "code_anfordern", email: this.email });
       if (status !== 200) throw new Error("Antwort");
-      this.meldung = "";
       this.wechsle("code");
     } catch {
       this.wechsle("fehler");
@@ -312,7 +430,7 @@ class Widget {
     }
   }
 
-  private async melddeAb() {
+  private async meldeAb() {
     const token = this.token;
     this.abgemeldet();
     if (token) {
@@ -323,6 +441,7 @@ class Widget {
       }
     }
     this.roh = {};
+    this.bestaetigt = {};
     this.einwilligung = false;
     this.alter16 = false;
     this.wechsle("einwilligung");
@@ -332,6 +451,93 @@ class Widget {
     this.token = null;
     this.profil = undefined;
     tokenSpeicher.loeschen();
+  }
+
+  // -------------------------------------------------------------------------
+  // Mess-Schritte
+  // -------------------------------------------------------------------------
+
+  private messFelder(): Feld[] {
+    const felder: Feld[] = ["koerpergroesse", "brust", "huefte"];
+    if (this.tailleGewertet || this.taillePflicht) felder.push("taille");
+    return felder;
+  }
+
+  private aktuellesFeld(): Feld {
+    return this.messFelder()[this.messIndex]!;
+  }
+
+  /** Weiter im Mess-Schritt: Pflicht und Bereich prüfen, dann Plausibilität (einmal je Wert nachfragen). */
+  private weiter() {
+    const feld = this.aktuellesFeld();
+    const eingabe = this.wurzel?.getElementById(`ox-${feld}`) as HTMLInputElement | null;
+    if (eingabe) this.roh[feld] = eingabe.value;
+    const roh = (this.roh[feld] ?? "").trim();
+    const wert = alsZahl(roh);
+    const regel = FELDER.find((f) => f.feld === feld)!;
+    const pflicht = feld !== "taille" || this.taillePflicht;
+    this.feldFehler = {};
+
+    if (wert === null) {
+      if (pflicht) {
+        this.feldFehler[feld] = `Bitte geben Sie Ihren ${regel.beschriftung} in cm ein.`;
+        return this.zeichneUndFokus(`ox-${feld}`);
+      }
+      return this.naechsterSchritt();
+    }
+    if (Number.isNaN(wert)) {
+      this.feldFehler[feld] = "Bitte nur eine Zahl eingeben, z. B. 92 oder 92,5.";
+      return this.zeichneUndFokus(`ox-${feld}`);
+    }
+
+    if (this.bestaetigt[feld] !== roh) {
+      const hinweis = pruefePlausibel(feld, wert, this.andereWerte(feld), this.plausi);
+      if (hinweis) {
+        this.hinweis = { feld, hinweis };
+        this.zeichne();
+        this.wurzel?.querySelector<HTMLElement>(".nachfrage")?.focus();
+        return;
+      }
+    }
+
+    if (wert < regel.min || wert > regel.max) {
+      this.feldFehler[feld] = `Bitte prüfen Sie den Wert. Erwartet wird ein Wert zwischen ${regel.min} und ${regel.max} cm.`;
+      return this.zeichneUndFokus(`ox-${feld}`);
+    }
+    this.naechsterSchritt();
+  }
+
+  private andereWerte(feld: Feld): Partial<Record<Feld, number>> {
+    const werte: Partial<Record<Feld, number>> = {};
+    for (const f of this.messFelder()) {
+      if (f === feld) continue;
+      const w = alsZahl(this.roh[f]);
+      if (w !== null && !Number.isNaN(w)) werte[f] = w;
+    }
+    return werte;
+  }
+
+  private naechsterSchritt() {
+    this.hinweis = null;
+    if (this.messIndex < this.messFelder().length - 1) {
+      this.messIndex += 1;
+      return this.wechsle("messen");
+    }
+    this.wechsle("passform");
+  }
+
+  private zurueck() {
+    this.hinweis = null;
+    this.feldFehler = {};
+    if (this.schritt === "passform") {
+      this.messIndex = this.messFelder().length - 1;
+      return this.wechsle("messen");
+    }
+    if (this.schritt === "messen" && this.messIndex > 0) {
+      this.messIndex -= 1;
+      return this.wechsle("messen");
+    }
+    this.wechsle(this.token && this.profil ? "willkommen" : "einwilligung");
   }
 
   // -------------------------------------------------------------------------
@@ -347,25 +553,48 @@ class Widget {
       case "zur-einwilligung-weiter":
         if (this.einwilligung && this.alter16) void this.bestaetigeEinwilligung();
         return;
+      case "zurueck":
+        return this.zurueck();
+      case "vorschlag-uebernehmen": {
+        if (this.hinweis?.hinweis.art !== "vorschlag") return;
+        const feld = this.hinweis.feld;
+        this.roh[feld] = String(this.hinweis.hinweis.wert).replace(".", ",");
+        this.hinweis = null;
+        return this.weiter();
+      }
+      case "aendern": {
+        const feld = this.hinweis?.feld;
+        this.hinweis = null;
+        return this.zeichneUndFokus(feld ? `ox-${feld}` : undefined);
+      }
+      case "stimmt-so": {
+        if (!this.hinweis) return;
+        const feld = this.hinweis.feld;
+        this.bestaetigt[feld] = (this.roh[feld] ?? "").trim();
+        this.hinweis = null;
+        return this.weiter();
+      }
       case "masse-aendern":
-        return this.wechsle("masse");
+        this.messIndex = 0;
+        return this.wechsle("messen");
       case "erneut":
         this.wechsle("laden");
         return void this.starte();
       case "willkommen-rechnen":
-        return void this.rechne(false);
+        return void this.berechne(false);
+      case "abbrechen":
+        return this.brecheAb();
       case "speichern":
         this.feldFehler = {};
         return this.wechsle("speichern");
-      case "code-senden":
-        return void this.fordereCodeAn();
       case "code-erneut":
         this.meldung = "Wir haben Ihnen einen neuen Code geschickt.";
         return void this.fordereCodeAn();
       case "andere-email":
+        this.meldung = "";
         return this.wechsle("speichern");
       case "abmelden":
-        return void this.melddeAb();
+        return void this.meldeAb();
     }
   }
 
@@ -381,24 +610,24 @@ class Widget {
     if (feld.name === "altersgruppe") this.altersgruppe = feld.value;
     if (feld.name === "passform") {
       this.passform = feld.value as Passform;
-      // Im Ergebnis rechnet der Umschalter sofort neu (angemeldet mit dem Profil).
-      if (this.schritt === "ergebnis") void this.rechne(!this.token);
+      // Im Ergebnis rechnet der Umschalter sofort neu, ohne Ladebildschirm.
+      if (this.schritt === "ergebnis") void this.rechneSofort();
     }
   }
 
   private beiAbsenden(e: Event) {
     e.preventDefault();
     const formular = e.target as HTMLFormElement;
-    if (formular.dataset.formular === "code") {
-      const code = (formular.elements.namedItem("code") as HTMLInputElement).value;
-      return void this.pruefeCode(code);
+    switch (formular.dataset.formular) {
+      case "code":
+        return void this.pruefeCode((formular.elements.namedItem("code") as HTMLInputElement).value);
+      case "speichern":
+        return void this.fordereCodeAn();
+      case "messen":
+        return this.weiter();
+      case "passform":
+        return void this.berechne(true);
     }
-    if (formular.dataset.formular === "speichern") return void this.fordereCodeAn();
-    for (const { feld } of FELDER) {
-      const eingabe = formular.elements.namedItem(feld) as HTMLInputElement | null;
-      if (eingabe) this.roh[feld] = eingabe.value;
-    }
-    void this.rechne(true);
   }
 
   private beiTaste(e: KeyboardEvent) {
@@ -409,9 +638,9 @@ class Widget {
     }
     if (e.key !== "Tab" || !this.wurzel) return;
     // Fokus bleibt im Fenster.
-    const fokussierbar = [...this.wurzel.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select, [tabindex='-1']")].filter(
-      (el) => el.offsetParent !== null || el.tagName === "H2",
-    );
+    const fokussierbar = [
+      ...this.wurzel.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select, summary, a[href], [tabindex='-1']"),
+    ].filter((el) => el.offsetParent !== null || el.tagName === "H2");
     const erstes = fokussierbar[0];
     const letztes = fokussierbar[fokussierbar.length - 1];
     const aktiv = this.wurzel.activeElement;
@@ -434,6 +663,11 @@ class Widget {
     this.wurzel?.querySelector<HTMLElement>("h2")?.focus();
   }
 
+  private zeichneUndFokus(id?: string) {
+    this.zeichne();
+    if (id) this.wurzel?.getElementById(id)?.focus();
+  }
+
   private sage(text: string) {
     const ansage = this.wurzel?.querySelector("[data-ansage]");
     if (ansage) ansage.textContent = text;
@@ -443,15 +677,40 @@ class Widget {
     const r = this.ergebnis;
     if (!r) return "";
     if (r.status === "empfohlen" && r.recommended_size) {
-      return `Empfohlene Größe ${r.recommended_size}, Passform ${PASSFORMEN.find(([p]) => p === this.passform)?.[1]}.`;
+      return `Empfohlene Größe ${r.recommended_size}, Passform ${this.passformText()}.`;
     }
     return "Keine sichere Größenempfehlung möglich.";
   }
 
+  private passformText() {
+    return PASSFORMEN.find(([p]) => p === this.passform)?.[1] ?? "";
+  }
+
   private zeichne() {
-    const inhalt = this.wurzel?.querySelector<HTMLElement>("[data-inhalt]");
-    if (!inhalt) return;
-    inhalt.innerHTML = this.html();
+    const w = this.wurzel;
+    if (!w) return;
+    const kopf = w.querySelector<HTMLElement>("[data-kopf]");
+    const inhalt = w.querySelector<HTMLElement>("[data-inhalt]");
+    if (kopf) kopf.innerHTML = this.htmlKopf();
+    if (inhalt) inhalt.innerHTML = this.html();
+  }
+
+  private htmlKopf() {
+    const schliessen = `<button type="button" class="schliessen" data-aktion="schliessen" aria-label="Größenberatung schließen">×</button>`;
+    if (this.schritt === "messen" || this.schritt === "passform") {
+      const felder = this.messFelder();
+      const gesamt = felder.length;
+      const nummer = this.schritt === "passform" ? gesamt : this.messIndex + 1;
+      const titel = this.schritt === "passform" ? "Passform" : `${SCHRITTE[this.aktuellesFeld()].kurz} · ${nummer} von ${gesamt}`;
+      const anteil = this.schritt === "passform" ? 100 : Math.round((nummer / (gesamt + 1)) * 100);
+      return `<div class="kopf-schritt">
+          <button type="button" class="zurueck" data-aktion="zurueck" aria-label="Zurück">‹</button>
+          <span class="titel">${escape(titel)}</span>
+          ${schliessen}
+        </div>
+        <div class="fortschritt" role="progressbar" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${anteil}"><span style="width:${anteil}%"></span></div>`;
+    }
+    return `<div class="kopf"><span class="marke">Ommetryx · Größenberatung</span>${schliessen}</div>`;
   }
 
   private html(): string {
@@ -471,8 +730,12 @@ class Widget {
         return this.htmlEinwilligung();
       case "willkommen":
         return this.htmlWillkommen();
-      case "masse":
-        return this.htmlMasse();
+      case "messen":
+        return this.htmlMessen();
+      case "passform":
+        return this.htmlPassformSchritt();
+      case "berechnung":
+        return this.htmlBerechnung();
       case "ergebnis":
         return this.htmlErgebnis();
       case "speichern":
@@ -505,26 +768,69 @@ class Widget {
     return `<h2 id="ox-titel" tabindex="-1">Willkommen zurück</h2>
       <p>Ihre Maße sind gespeichert. Wählen Sie nur noch, wie dieses Teil sitzen soll.</p>
       <form novalidate data-formular="willkommen">${this.htmlPassform()}</form>
-      <button type="button" class="primaer" data-aktion="willkommen-rechnen" ${this.rechnet ? "disabled" : ""}>${this.rechnet ? "Wird berechnet …" : "Größe berechnen"}</button>
+      <button type="button" class="primaer" data-aktion="willkommen-rechnen">Größe berechnen</button>
       <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
       ${this.meinLink()}
       <button type="button" class="link" data-aktion="abmelden">Abmelden</button>`;
   }
 
-  /** Link zu „Mein Ommetryx“ (Maße ändern, Einwilligungen widerrufen, Daten herunterladen, löschen). */
-  private meinLink() {
-    if (!this.meinUrl) return "";
-    return `<a class="link" style="display:block" href="${escape(this.meinUrl)}" target="_blank" rel="noopener noreferrer">Mein Ommetryx: Daten ansehen, ändern oder löschen<span class="nur-vorleser"> (öffnet in neuem Tab)</span></a>`;
+  /** Ein Mess-Schritt (Figma E03–E06): Video-Platzhalter, Frage, Warum, Zahlenfeld, Kurz-Tipp, Nachfrage. */
+  private htmlMessen() {
+    const feld = this.aktuellesFeld();
+    const t = SCHRITTE[feld];
+    const id = `ox-${feld}`;
+    const fehler = this.feldFehler[feld];
+    const optional = feld === "taille" && !this.taillePflicht;
+    const beschreibung = [fehler ? `${id}-fehler` : "", this.hinweis?.feld === feld ? "ox-nachfrage" : ""].filter(Boolean).join(" ");
+    const letzter = this.messIndex === this.messFelder().length - 1;
+
+    return `<div class="video" role="img" aria-label="Platzhalter für ein Anleitungsvideo: ${escape(t.video)}">
+        <span class="abspielen" aria-hidden="true"><svg width="20" height="22" viewBox="0 0 20 22"><path d="M2 1.5v19L19 11z" fill="#fff"/></svg></span>
+        <span aria-hidden="true">[Video: ${escape(t.video)}]</span>
+      </div>
+      <form novalidate data-formular="messen">
+        <h2 id="ox-titel" tabindex="-1">${escape(t.frage)}${optional ? ` <span class="leise">(empfohlen)</span>` : ""}</h2>
+        <p class="warum">${escape(t.warum)}</p>
+        <div class="feld">
+          <label for="${id}" class="nur-vorleser">${escape(t.frage)} in Zentimetern</label>
+          <div class="mit-einheit">
+            <input id="${id}" name="${feld}" inputmode="decimal" autocomplete="off" placeholder="${feld === "koerpergroesse" ? "z. B. 168" : "z. B. 92"}"
+              value="${escape(this.roh[feld] ?? "")}" ${fehler ? `aria-invalid="true"` : ""} ${beschreibung ? `aria-describedby="${beschreibung}"` : ""} />
+            <span class="einheit" aria-hidden="true">cm</span>
+          </div>
+          ${fehler ? `<span class="fehler" id="${id}-fehler">${escape(fehler)}</span>` : ""}
+        </div>
+        ${this.hinweis?.feld === feld ? this.htmlNachfrage(this.hinweis.hinweis, t.frage) : ""}
+        <details class="tipp">
+          <summary>Kein Video möglich? Kurz-Tipp</summary>
+          <p>${escape(t.tipp)}</p>
+          <p class="leise">${escape(MESS_HINWEIS)}</p>
+        </details>
+        <button type="button" class="karte-knopf" data-aktion="schliessen">
+          <span><strong>Kein Maßband zur Hand?</strong><span>Dann nutzen Sie bitte die Größentabelle des Shops.</span></span>
+          <span aria-hidden="true">›</span>
+        </button>
+        <button type="submit" class="primaer">${letzter ? "Weiter zur Passform" : "Weiter"}</button>
+      </form>`;
   }
 
-  private htmlFeld(feld: Feld, beschriftung: string, zusatz: string) {
-    const fehler = this.feldFehler[feld];
-    const id = `ox-${feld}`;
-    return `<div class="feld">
-        <label for="${id}">${beschriftung} in cm${zusatz}</label>
-        <input id="${id}" name="${feld}" inputmode="decimal" autocomplete="off" value="${escape(this.roh[feld] ?? "")}"
-          ${fehler ? `aria-invalid="true" aria-describedby="${id}-fehler"` : ""} />
-        ${fehler ? `<span class="fehler" id="${id}-fehler">${escape(fehler)}</span>` : ""}
+  /** Nachfrage zur Plausibilität (Figma E17). Die Kundin entscheidet immer selbst. */
+  private htmlNachfrage(h: NonNullable<Hinweis>, frage: string) {
+    if (h.art === "vorschlag") {
+      return `<div class="nachfrage" id="ox-nachfrage" tabindex="-1" role="group" aria-label="Rückfrage zu ${escape(frage)}">
+          <p><strong>${escape(h.frage)}</strong></p>
+          <div class="knoepfe">
+            <button type="button" class="primaer" data-aktion="vorschlag-uebernehmen">${escape(String(h.wert).replace(".", ","))} cm übernehmen</button>
+            <button type="button" class="sekundaer" data-aktion="aendern">Ändern</button>
+          </div>
+        </div>`;
+    }
+    return `<div class="nachfrage" id="ox-nachfrage" tabindex="-1" role="group" aria-label="Rückfrage zu ${escape(frage)}">
+        <p><strong>Bitte noch einmal messen?</strong> ${escape(h.text)}</p>
+        <div class="knoepfe">
+          <button type="button" class="sekundaer" data-aktion="stimmt-so">Stimmt so</button>
+          <button type="button" class="sekundaer" data-aktion="aendern">Nochmal messen</button>
+        </div>
       </div>`;
   }
 
@@ -539,15 +845,11 @@ class Widget {
       </fieldset>`;
   }
 
-  private htmlMasse() {
-    const taille = this.taillePflicht ? "" : " (empfohlen)";
-    return `<h2 id="ox-titel" tabindex="-1">Ihre Maße</h2>
-      <p class="leise">Messen Sie mit einem Maßband, am besten zu zweit. Normal ausatmen, Band nicht straff ziehen.</p>
-      <form novalidate data-formular="masse">
-        ${this.htmlFeld("koerpergroesse", "Körpergröße", "")}
-        ${this.htmlFeld("brust", "Brustumfang", "")}
-        ${this.htmlFeld("huefte", "Hüftumfang", "")}
-        ${this.tailleGewertet || this.taillePflicht ? this.htmlFeld("taille", "Taillenumfang", taille) : ""}
+  private htmlPassformSchritt() {
+    return `<form novalidate data-formular="passform">
+        <h2 id="ox-titel" tabindex="-1">Wie soll dieses Teil sitzen?</h2>
+        <p class="warum">Jedes Teil darf anders sitzen. Wir fragen deshalb bei jedem Artikel neu.</p>
+        ${this.htmlPassform().replace("<legend>Wie soll dieses Teil sitzen?</legend>", '<legend class="nur-vorleser">Passform</legend>')}
         <div class="feld">
           <label for="ox-altersgruppe">Altersgruppe (optional)</label>
           <select id="ox-altersgruppe" name="altersgruppe">
@@ -555,9 +857,21 @@ class Widget {
             ${ALTERSGRUPPEN.map((g) => `<option value="${g}" ${this.altersgruppe === g ? "selected" : ""}>${g} Jahre</option>`).join("")}
           </select>
         </div>
-        ${this.htmlPassform()}
-        <button type="submit" class="primaer" ${this.rechnet ? "disabled" : ""}>${this.rechnet ? "Wird berechnet …" : "Größe berechnen"}</button>
+        <button type="submit" class="primaer">Größe berechnen</button>
       </form>`;
+  }
+
+  /** Ladebildschirm (Figma E36/E36b). Stufen und Häkchen setzt setzeEtappe, ohne neu zu zeichnen. */
+  private htmlBerechnung() {
+    const schritte = ["Ihre Maße", "Echte Maße dieses Artikels", `Passform „${this.passformText()}“`];
+    return `<div class="berechnung">
+        ${logoHtml(BASIS)}
+        <h2 id="ox-titel" tabindex="-1">Wir vergleichen Ihre Maße mit den echten Maßen dieses Artikels</h2>
+        <ol class="schritte-liste">
+          ${schritte.map((s) => `<li><span class="marke-punkt" aria-hidden="true"></span>${escape(s)}</li>`).join("")}
+        </ol>
+        <button type="button" class="link" data-aktion="abbrechen">Abbrechen</button>
+      </div>`;
   }
 
   private htmlErgebnis() {
@@ -565,14 +879,18 @@ class Widget {
     const kopf =
       r.status === "empfohlen" && r.recommended_size
         ? `<div class="ergebnis">
-            <div class="kreis" aria-hidden="true">${escape(r.recommended_size)}</div>
+            <div class="kreis" aria-hidden="true"><span>${escape(r.recommended_size)}</span></div>
             <div><strong>Größe ${escape(r.recommended_size)}</strong><span class="leise">Sicherheit: ${sicherheitInWorten(r.confidence)}</span></div>
-          </div>
-          ${r.alternative_size ? `<p>Sie liegen zwischen zwei Größen. ${escape(r.alternative_size)} passt fast genauso gut.</p>` : ""}
-          ${r.begrenzt_durch_schnitt ? `<p class="leise">Dieser Artikel ist anders geschnitten als Ihre Wahl. Wir haben die Empfehlung daran angepasst.</p>` : ""}`
+          </div>`
         : r.status === "keine_passende_groesse"
           ? `<p>Leider passt Ihnen keine der verfügbaren Größen gut genug. Bitte nutzen Sie die Größentabelle des Shops.</p>`
           : `<p>Für Ihre Maße können wir bei diesem Artikel keine sichere Größe empfehlen. Bitte nutzen Sie die Größentabelle des Shops.</p>`;
+    const zusatz = [
+      r.status === "empfohlen" && r.alternative_size ? `<p>Sie liegen zwischen zwei Größen. ${escape(r.alternative_size)} passt fast genauso gut.</p>` : "",
+      r.status === "empfohlen" && r.begrenzt_durch_schnitt
+        ? `<p class="leise">Dieser Artikel ist anders geschnitten als Ihre Wahl. Wir haben die Empfehlung daran angepasst.</p>`
+        : "",
+    ].join("");
 
     const konto = this.token
       ? `${this.meldung ? `<p class="karte" role="status">${escape(this.meldung)}</p>` : `<p class="leise">Ihre Maße sind gespeichert.</p>`}
@@ -580,13 +898,25 @@ class Widget {
          <button type="button" class="link" data-aktion="abmelden">Abmelden</button>`
       : `<button type="button" class="sekundaer" data-aktion="speichern">Maße für den nächsten Einkauf speichern</button>`;
 
-    return `<h2 id="ox-titel" tabindex="-1">Ihre Empfehlung</h2>
-      ${kopf}
-      <form novalidate data-formular="ergebnis">${this.htmlPassform()}</form>
-      ${this.rechnet ? `<p class="leise">Wird neu berechnet …</p>` : ""}
-      <button type="button" class="primaer" data-aktion="schliessen">Fertig</button>
-      <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
-      ${konto}`;
+    return `<div class="${this.reveal ? "reveal" : ""}">
+        <h2 id="ox-titel" tabindex="-1">Ihre Empfehlung</h2>
+        ${kopf}
+        <div class="folge">
+          ${zusatz ? `<div>${zusatz}</div>` : ""}
+          <form novalidate data-formular="ergebnis">${this.htmlPassform()}</form>
+          <button type="button" class="primaer" data-aktion="schliessen">Fertig</button>
+          <div>
+            <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
+            ${konto}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /** Link zu „Mein Ommetryx“ (Maße ändern, Einwilligungen widerrufen, Daten herunterladen, löschen). */
+  private meinLink() {
+    if (!this.meinUrl) return "";
+    return `<a class="link" style="display:block" href="${escape(this.meinUrl)}" target="_blank" rel="noopener noreferrer">Mein Ommetryx: Daten ansehen, ändern oder löschen<span class="nur-vorleser"> (öffnet in neuem Tab)</span></a>`;
   }
 
   private htmlSpeichern() {
@@ -610,7 +940,7 @@ class Widget {
         </div>
         <button type="submit" class="primaer">Code senden</button>
       </form>
-      <button type="button" class="sekundaer" data-aktion="masse-aendern">Zurück</button>`;
+      <button type="button" class="sekundaer" data-aktion="schliessen">Nicht speichern</button>`;
   }
 
   private htmlCode() {

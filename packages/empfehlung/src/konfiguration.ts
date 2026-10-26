@@ -111,6 +111,11 @@ const ergaenzungenSchema = z.object({
   zusatzgewichte: z.object({ schulter: z.number(), aermellaenge: z.number() }),
   mindest_klasse1: z.record(messpunkt, z.number()),
   groessensprung_standard_cm: z.number().positive(),
+  plausibilitaet: z.object({
+    abweichung_cm: z.number().positive(),
+    huefte_minus_brust_cm: z.number(),
+    brust_minus_taille_cm: z.number(),
+  }),
   artikelarten: z.record(z.string(), artikelartSchema),
 });
 
@@ -144,6 +149,8 @@ export interface Konfiguration {
   /** Referenz-Körpermaß für die Umrechnung, oder undefined, wenn der Messpunkt nicht umgerechnet wird. */
   kRef(messpunkt: Messpunkt): number | undefined;
   groessensprungStandard: number;
+  /** Erwartete Abstände zwischen den Körpermaßen für die Plausibilitätsprüfung im Widget. */
+  plausibilitaet: { abweichung_cm: number; huefte_minus_brust_cm: number; brust_minus_taille_cm: number };
   artikelart(name: string): Artikelart;
   artikelarten: string[];
   bundRegel(regel: z.infer<typeof messpunktRegelSchema>, bund: BundTyp): Zeilenwahl | null | undefined;
@@ -194,6 +201,7 @@ export function ladeKonfiguration(excelRoh: unknown, ergaenzungenRoh: unknown): 
     zusatzgewicht: (art) => erg.zusatzgewichte[art],
     kRef: (mp) => excel.parameter[`k_ref_${mp}_cm`],
     groessensprungStandard: erg.groessensprung_standard_cm,
+    plausibilitaet: erg.plausibilitaet,
     artikelart(name) {
       const art = erg.artikelarten[name];
       if (!art) fehler("unbekannte_artikelart", `Unbekannte Artikelart "${name}"`);

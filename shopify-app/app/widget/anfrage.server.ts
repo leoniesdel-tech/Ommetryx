@@ -53,7 +53,13 @@ export async function artikelInfo(shop: string, produkt: string | null) {
   const k = await aktiveKonfiguration();
   const art = k.artikelart(artikel.artikelart);
   const taillePflicht = art.primaermass === "huefte" && Boolean(art.messpunkte.taille) && artikel.bundTyp !== "gummizug";
-  return antwort({ vermessen: true, taillePflicht, tailleGewertet: Boolean(art.messpunkte.taille), meinUrl: meinOmmetryxUrl() });
+  return antwort({
+    vermessen: true,
+    taillePflicht,
+    tailleGewertet: Boolean(art.messpunkte.taille),
+    meinUrl: meinOmmetryxUrl(),
+    plausibilitaet: k.plausibilitaet,
+  });
 }
 
 /** Rechnet die Empfehlung. Ergebnis ohne Körpermaße zurück (nur Mehrweiten je Zone für die Ansicht). */

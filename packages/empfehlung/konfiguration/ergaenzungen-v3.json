@@ -26,6 +26,13 @@
     "taille": -2
   },
 
+  "_plausibilitaet": "Plausibilitätsprüfung im Widget (CLAUDE.md Abschnitt 6: bei > ca. 6 cm Abweichung vom erwarteten Wert nachfragen, nie überstimmen). Erwartete Abstände aus der deutschen Konfektionstabelle Damen, Größe 40: Brust 92, Taille 76, Hüfte 100. Vorschlag vom 26.10., vom Mitgründer zu prüfen (Herren-Tabellen fehlen noch).",
+  "plausibilitaet": {
+    "abweichung_cm": 6,
+    "huefte_minus_brust_cm": 8,
+    "brust_minus_taille_cm": 16
+  },
+
   "_groessensprung_standard_cm": "Nur wenn ein Artikel nur eine Größe hat und G nicht aus den eigenen Messungen folgt. EN 13402-3: typisch 4 cm.",
   "groessensprung_standard_cm": 4,
 

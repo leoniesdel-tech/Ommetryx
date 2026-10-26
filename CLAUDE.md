@@ -314,3 +314,10 @@ Bis zur Klärung nicht raten.
 6. **Umfrage-Mail ohne Bestelldaten:** Auslöser ist unser eigenes Ereignis „Größe übernommen“ (nur mit Einwilligung 2), die Mail fragt „Haben Sie das Teil gekauft und passt es?“
 7. **Kontrollgruppe:** Hash der Warenkorb-Kennung auf dem Server, Markierung „mit Ommetryx“ am Warenkorb. Die Technik muss vorher in der Shopify-Doku geprüft werden. Bestell- und Retourendaten brauchen Zugriffsrechte (Stufe 1).
 8. **`customers/redact`:** Da wir keine Shopify-Kunden verknüpfen, nur die Einträge zu den genannten Bestellungen löschen, nicht das Profil.
+
+**Etappe 8a (begonnen 26.10., Zwischenstand – im Browser noch NICHT getestet)**
+- Widget neu: Mess-Schritte einzeln (Kopf „Brust · 2 von 4“, Fortschritt, Video-Platzhalter, Warum-Satz, zugeklappter Kurz-Tipp, „Kein Maßband?“-Karte → schließt), Passform-Schritt mit Altersgruppe, Ladebildschirm mit Logo in 3 Etappen (Figma E36/E36b, Spezifikation 2004:301), Ergebnis-Reveal, Passform-Umschalter rechnet ohne Lader.
+- Plausibilität `widget/src/plausi.ts` (Tippfehler, Meter, Zoll, > 6 cm Abweichung); Werte in `ergaenzungen-v3.json` → `plausibilitaet` (Konfektionstabelle Damen Gr. 40, Mitgründer prüfen; Herren fehlen). Figur-Schritt bewusst weggelassen (Regeln fehlen, Datensparsamkeit).
+- Logo-Ebenen aus Figma (`assets/ox-logo-*.svg`). Sora: Theme-Erweiterungen erlauben keine .woff2 → `widget/schrift/sora-latin.woff2` wird beim Bauen als Base64 in `assets/ommetryx-schrift.css` eingebettet.
+- **Nächster Schritt:** App starten (lief zuletzt in Tab „App starten“), im eingebauten Browser die Testbluse durchspielen (920 → Vorschlag, Hüfte 78 → Nachfrage, Ladebildschirm, Ergebnis), dann Commit/Push. Danach 8b (Warum M?, Zonen-Ansicht, So säße L, Größe übernehmen).
+- **Falle:** Während `shopify app dev` läuft, führen Widget-Änderungen oft zu „Internal error … on our end“ und Absturz → App nach Widget-Builds neu starten (vorher übrige `react-router dev`-Prozesse beenden).
