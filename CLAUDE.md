@@ -246,7 +246,7 @@ Befehle (im Ordner `packages/empfehlung`):
 - Leggings-Bereiche in % werden **nicht zusätzlich umgerechnet**.
 
 **Interner Bereich (gebaut 23.10., Etappe 5)**
-- `/intern` mit eigenem Team-Login: **Passwort (scrypt) + TOTP-Code aus einer Authenticator-App**. Keine Registrierung, nur Einladung per `npm run team:einladen` (Link 24 h, einmalig). 5 Fehlversuche → 15 Min. Sperre, Code nie zweimal gültig, Sitzung 8 h (Cookie `ox_intern`, HttpOnly, Secure, SameSite=Strict, Path=/intern), Origin-Prüfung bei Formularen. TOTP-Geheimnis AES-256-GCM-verschlüsselt mit `INTERN_SCHLUESSEL` aus `.env`.
+- `/intern` mit eigenem Team-Login: **Passwort (scrypt) + TOTP-Code aus einer Authenticator-App**. Keine Registrierung, nur Einladung per `npm run team:einladen` (Link 24 h, einmalig). 5 Fehlversuche → 15 Min. Sperre, Code nie zweimal gültig, Sitzung 8 h (Cookie `ox_intern`, HttpOnly, Secure, SameSite=Strict, Path=/ – nicht /intern, weil React Router Daten über `/intern.data` lädt), Origin-Prüfung bei Formularen. TOTP-Geheimnis AES-256-GCM-verschlüsselt mit `INTERN_SCHLUESSEL` aus `.env`.
 - Leonie ist als erstes Teammitglied eingerichtet (Login mit ihrer GMX-Adresse).
 - Erfassungsmaske: Shop → Produkt (live aus Shopify) → Artikel-Eigenschaften und Maße je Größe (flach eingeben, Umfänge × 2), Prüfungen (Pflichtmaße, `unrealistisches_ergebnis`, Hinweis wenn Maße nicht wachsen), Probe-Rechnung mit erfundenen Körpermaßen (nicht gespeichert).
 - Im Test-Shop gibt es die „Testbluse Leinen“ (38–44, Brust-Umfang 100/104/108/112) – Probe Brust 96 regulär → 40.
@@ -275,7 +275,15 @@ Befehle (im Ordner `packages/empfehlung`):
 - **Widget:** Token in `localStorage` unter `ommetryx-sitzung` (nur nach aktiver Anmeldung, nie Maße/E-Mail). Ablauf: Ergebnis → „Maße speichern“ → Einwilligung Profil + E-Mail → Code → gespeichert; beim nächsten Öffnen „Willkommen zurück“ → Passform → Ergebnis. Altersgruppe optional im Maße-Schritt.
 - **E-Mails in der Entwicklung** landen im Entwicklungs-Postfach `/intern/postfach` (24 h). Brevo kommt vor dem Pilot (`app/kundin/mail.server.ts`), im Livebetrieb wirft der Versand bis dahin einen Fehler.
 - Ende-zu-Ende getestet im eingebauten Browser mit `probe@test.invalid`: speichern → neu laden → „Willkommen zurück“ → 40.
-- **Noch offen (7b):** „Mein Ommetryx“ (Maße ändern, Einwilligungen widerrufen, Shops trennen, Daten herunterladen, löschen). Später: 24-Monate-Löschung, Rate-Limit je Shop/IP für Code-Anforderungen.
+- Später: 24-Monate-Löschung mit Erinnerung, Rate-Limit je Shop/IP für Code-Anforderungen.
+
+**„Mein Ommetryx“ (Etappe 7b, fertig 26.10.)**
+- Seiten `/mein/anmelden` (E-Mail-Code, **nur bestehende Profile**, kein neues Konto), `/mein` (Maße ändern, Einwilligungen mit Textversion ansehen und widerrufen, Shops trennen), `/mein/daten` (JSON-Download), `/mein/loeschen` (mit Bestätigung), `/mein/geloescht`, `/mein/abmelden`. Sitzung 60 Min. im Bereich `mein-ommetryx` (wird nicht als Shop vermerkt).
+- **Eine Löschfunktion für alles:** `loescheKundin` in `app/kundin/verwaltung.server.ts` (auch für Widerruf, später 24-Monats-Löschung und `customers/redact`). Löscht Maße, E-Mail, Zuordnung, Sitzungen, Shops, Codes, Sperren; Einwilligungsnachweise bleiben **ohne Personenbezug** (kundin_id leer, widerrufen_am gesetzt). Widerruf von „profil“ oder „verarbeitung“ = Löschen.
+- Widget zeigt angemeldet den Link „Mein Ommetryx“ (Adresse aus `SHOPIFY_APP_URL`, später eigene Domain).
+- **Cookie-Regeln (gelernt):** `Path=/`, weil React Router Daten über `/mein.data` bzw. `/intern.data` lädt (liegt außerhalb von `Path=/mein`). `ox_mein` mit `SameSite=Lax`, damit der Link aus dem Shop angemeldet ankommt (Formulare schützt `pruefeHerkunft`). Beim Lesen **alle** Cookies gleichen Namens prüfen (Browser schickt alte mit anderem Pfad mit).
+- Ende-zu-Ende getestet: Anmelden → Brust ändern → Widget rechnet sofort 42 → Profil löschen → keine Restdaten, Widget beginnt wieder mit der Einwilligung.
+- **Anwaltsliste:** Reicht es, beim Widerruf/Löschen den Einwilligungsnachweis ohne Personenbezug aufzubewahren?
 
 **Technik (vorgeschlagen, von Leonie nicht ausdrücklich bestätigt – vorerst so umsetzen)**
 - Login gilt pro Shop-Domain: In einem neuen Shop meldet sich die Kundin einmal per Code an.

@@ -16,6 +16,16 @@ export const SPERRE_MINUTEN = 10;
 export const MAX_ANFORDERUNGEN = 5;
 export const ANFORDERUNGS_FENSTER_MINUTEN = 15;
 export const SITZUNG_TAGE = 30;
+/** „Mein Ommetryx“: eigener Bereich statt Shop, kürzere Sitzung, nur bestehende Profile. */
+export const MEIN_BEREICH = "mein-ommetryx";
+export const MEIN_SITZUNG_MINUTEN = 60;
+
+export interface LoginOptionen {
+  /** Kein neues Konto anlegen (Mein Ommetryx: ohne Einwilligung kein Profil). */
+  nurBestehende?: boolean;
+}
+
+const sitzungsDauer = (shop: string) => (shop === MEIN_BEREICH ? minuten(MEIN_SITZUNG_MINUTEN) : SITZUNG_TAGE * 24 * 3600 * 1000);
 
 const minuten = (n: number) => n * 60 * 1000;
 
@@ -33,7 +43,7 @@ function gleich(a: string, b: string) {
 }
 
 /** Fordert einen Code an. Gibt nichts zurück, damit niemand erfährt, ob die E-Mail bekannt ist. */
-export async function fordereCodeAn(email: string): Promise<void> {
+export async function fordereCodeAn(email: string, optionen: LoginOptionen = {}): Promise<void> {
   const hash = emailHash(email);
   const jetzt = new Date();
   const schutz = await identityDb.loginSchutz.upsert({ where: { emailHash: hash }, create: { emailHash: hash }, update: {} });
@@ -47,6 +57,9 @@ export async function fordereCodeAn(email: string): Promise<void> {
     where: { emailHash: hash },
     data: { anforderungen: anforderungen + 1, anforderungenSeit: fensterAbgelaufen ? jetzt : schutz.anforderungenSeit },
   });
+  // Ohne Profil keinen Code schicken – die Antwort nach außen bleibt dieselbe.
+  if (optionen.nurBestehende && !(await identityDb.kundin.findUnique({ where: { emailHash: hash }, select: { id: true } }))) return;
+
   // Ältere Codes werden ungültig, es gilt immer nur der neueste.
   await identityDb.loginCode.updateMany({ where: { emailHash: hash, verbraucht: false }, data: { verbraucht: true } });
 
@@ -60,7 +73,7 @@ export async function fordereCodeAn(email: string): Promise<void> {
 export type Anmeldung = { ok: true; token: string; kundinId: string; pseudonymId: string; neu: boolean } | { ok: false };
 
 /** Prüft den Code. Bei Erfolg: Kundin anlegen oder finden, Sitzung im Shop erzeugen. */
-export async function pruefeCode(email: string, code: string, shop: string): Promise<Anmeldung> {
+export async function pruefeCode(email: string, code: string, shop: string, optionen: LoginOptionen = {}): Promise<Anmeldung> {
   const hash = emailHash(email);
   const jetzt = new Date();
   const schutz = await identityDb.loginSchutz.findUnique({ where: { emailHash: hash } });
@@ -93,6 +106,7 @@ export async function pruefeCode(email: string, code: string, shop: string): Pro
 
   let kundin = await identityDb.kundin.findUnique({ where: { emailHash: hash }, include: { zuordnung: true } });
   const neu = !kundin;
+  if (!kundin && optionen.nurBestehende) return { ok: false };
   if (!kundin) {
     kundin = await identityDb.kundin.create({
       data: {
@@ -107,7 +121,7 @@ export async function pruefeCode(email: string, code: string, shop: string): Pro
 
   const token = zufallsToken();
   await identityDb.kundinSitzung.create({
-    data: { tokenHash: sha256(token), kundinId: kundin.id, shop, gueltigBis: new Date(jetzt.getTime() + SITZUNG_TAGE * 24 * 3600 * 1000) },
+    data: { tokenHash: sha256(token), kundinId: kundin.id, shop, gueltigBis: new Date(jetzt.getTime() + sitzungsDauer(shop)) },
   });
   await merkeNutzung(kundin.id, shop);
   return { ok: true, token, kundinId: kundin.id, pseudonymId: zuordnung.pseudonymId, neu };
@@ -116,6 +130,7 @@ export async function pruefeCode(email: string, code: string, shop: string): Pro
 async function merkeNutzung(kundinId: string, shop: string) {
   const jetzt = new Date();
   await identityDb.kundin.update({ where: { id: kundinId }, data: { letzteAktivitaet: jetzt, erinnertAm: null } });
+  if (shop === MEIN_BEREICH) return;
   await identityDb.shopVerknuepfung.upsert({
     where: { kundinId_shop: { kundinId, shop } },
     create: { kundinId, shop },
@@ -133,7 +148,7 @@ export async function kundinAusToken(token: unknown, shop: string): Promise<{ ku
   if (!sitzung || sitzung.shop !== shop || sitzung.gueltigBis < new Date() || !sitzung.kundin.zuordnung) return null;
   await identityDb.kundinSitzung.update({
     where: { id: sitzung.id },
-    data: { gueltigBis: new Date(Date.now() + SITZUNG_TAGE * 24 * 3600 * 1000) },
+    data: { gueltigBis: new Date(Date.now() + sitzungsDauer(shop)) },
   });
   await merkeNutzung(sitzung.kundinId, shop);
   return { kundinId: sitzung.kundinId, pseudonymId: sitzung.kundin.zuordnung.pseudonymId };

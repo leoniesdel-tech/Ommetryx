@@ -100,7 +100,12 @@ describe("Signatur (HMAC)", () => {
 describe("Artikel-Abfrage", () => {
   it("meldet ein vermessenes Produkt", async () => {
     const antwort = await artikelLoader(aufrufArgs(new Request(signierteUrl("/proxy/artikel", { produkt: PRODUKT }))));
-    expect(await antwort.json()).toEqual({ vermessen: true, taillePflicht: false, tailleGewertet: true });
+    expect(await antwort.json()).toEqual({
+      vermessen: true,
+      taillePflicht: false,
+      tailleGewertet: true,
+      meinUrl: "https://ommetryx-test.example/mein",
+    });
     expect(antwort.headers.get("Cache-Control")).toBe("no-store");
   });
 

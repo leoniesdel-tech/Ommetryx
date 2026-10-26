@@ -91,6 +91,7 @@ class Widget {
   private profilEinwilligung = false;
   private email = "";
   private meldung = "";
+  private meinUrl: string | null = null;
 
   oeffnen(einstellungen: Einstellungen) {
     if (this.host) return;
@@ -175,11 +176,12 @@ class Widget {
         headers: { Accept: "application/json" },
         credentials: "same-origin",
       });
-      const daten = (await antwort.json()) as { vermessen?: boolean; taillePflicht?: boolean; tailleGewertet?: boolean };
+      const daten = (await antwort.json()) as { vermessen?: boolean; taillePflicht?: boolean; tailleGewertet?: boolean; meinUrl?: string | null };
       if (!antwort.ok) throw new Error("Antwort");
       if (!daten.vermessen) return this.wechsle("nicht_vermessen");
       this.taillePflicht = Boolean(daten.taillePflicht);
       this.tailleGewertet = Boolean(daten.tailleGewertet);
+      this.meinUrl = daten.meinUrl && daten.meinUrl.startsWith("https://") ? daten.meinUrl : null;
 
       this.token = tokenSpeicher.lesen();
       if (this.token) {
@@ -505,7 +507,14 @@ class Widget {
       <form novalidate data-formular="willkommen">${this.htmlPassform()}</form>
       <button type="button" class="primaer" data-aktion="willkommen-rechnen" ${this.rechnet ? "disabled" : ""}>${this.rechnet ? "Wird berechnet …" : "Größe berechnen"}</button>
       <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
+      ${this.meinLink()}
       <button type="button" class="link" data-aktion="abmelden">Abmelden</button>`;
+  }
+
+  /** Link zu „Mein Ommetryx“ (Maße ändern, Einwilligungen widerrufen, Daten herunterladen, löschen). */
+  private meinLink() {
+    if (!this.meinUrl) return "";
+    return `<a class="link" style="display:block" href="${escape(this.meinUrl)}" target="_blank" rel="noopener noreferrer">Mein Ommetryx: Daten ansehen, ändern oder löschen<span class="nur-vorleser"> (öffnet in neuem Tab)</span></a>`;
   }
 
   private htmlFeld(feld: Feld, beschriftung: string, zusatz: string) {
@@ -567,6 +576,7 @@ class Widget {
 
     const konto = this.token
       ? `${this.meldung ? `<p class="karte" role="status">${escape(this.meldung)}</p>` : `<p class="leise">Ihre Maße sind gespeichert.</p>`}
+         ${this.meinLink()}
          <button type="button" class="link" data-aktion="abmelden">Abmelden</button>`
       : `<button type="button" class="sekundaer" data-aktion="speichern">Maße für den nächsten Einkauf speichern</button>`;
 

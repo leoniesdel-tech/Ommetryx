@@ -39,6 +39,12 @@ export function antwort(daten: unknown, status = 200) {
 
 const produktGid = (nummer: string) => `gid://shopify/Product/${nummer}`;
 
+/** Adresse von „Mein Ommetryx“ (vorerst die App-Adresse, später eine eigene Domain). */
+function meinOmmetryxUrl() {
+  const basis = process.env.SHOPIFY_APP_URL;
+  return basis ? `${basis.replace(/\/$/, "")}/mein` : null;
+}
+
 /** Ist das Produkt vermessen, und braucht es die Taille? */
 export async function artikelInfo(shop: string, produkt: string | null) {
   if (!produkt || !/^\d{1,20}$/.test(produkt)) return antwort({ fehler: "ungueltige_anfrage" }, 400);
@@ -47,7 +53,7 @@ export async function artikelInfo(shop: string, produkt: string | null) {
   const k = await aktiveKonfiguration();
   const art = k.artikelart(artikel.artikelart);
   const taillePflicht = art.primaermass === "huefte" && Boolean(art.messpunkte.taille) && artikel.bundTyp !== "gummizug";
-  return antwort({ vermessen: true, taillePflicht, tailleGewertet: Boolean(art.messpunkte.taille) });
+  return antwort({ vermessen: true, taillePflicht, tailleGewertet: Boolean(art.messpunkte.taille), meinUrl: meinOmmetryxUrl() });
 }
 
 /** Rechnet die Empfehlung. Ergebnis ohne Körpermaße zurück (nur Mehrweiten je Zone für die Ansicht). */

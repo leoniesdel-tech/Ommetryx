@@ -240,6 +240,15 @@
   color: var(--petrol-tief);
 }
 
+.nur-vorleser {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .ergebnis-groesse {
   font-size: 40px;
   line-height: 1.25;

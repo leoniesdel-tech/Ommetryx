@@ -155,32 +155,33 @@ async function neueSitzung(db: PrismaClient, mitgliedId: number): Promise<string
   return token;
 }
 
-function cookieWert(request: Request): string | null {
-  const kopf = request.headers.get("Cookie") ?? "";
-  for (const teil of kopf.split(";")) {
+/** Alle Werte des Cookies (der Browser kann mehrere mit gleichem Namen, aber anderem Pfad schicken). */
+function cookieWerte(request: Request): string[] {
+  const werte: string[] = [];
+  for (const teil of (request.headers.get("Cookie") ?? "").split(";")) {
     const [name, ...rest] = teil.trim().split("=");
-    if (name === COOKIE) return rest.join("=") || null;
+    if (name === COOKIE && rest.join("=")) werte.push(rest.join("="));
   }
-  return null;
+  return werte;
 }
 
 export function sitzungsCookie(token: string): string {
-  return `${COOKIE}=${token}; Path=/intern; HttpOnly; Secure; SameSite=Strict; Max-Age=${SITZUNG_STUNDEN * 3600}`;
+  return `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SITZUNG_STUNDEN * 3600}`;
 }
 
 export function sitzungsCookieLoeschen(): string {
-  return `${COOKIE}=; Path=/intern; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+  return `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
 }
 
 export async function teamAusAnfrage(db: PrismaClient, request: Request): Promise<Team | null> {
-  const token = cookieWert(request);
-  if (!token) return null;
-  const sitzung = await db.teamSitzung.findUnique({
-    where: { tokenHash: sha256(token) },
-    include: { mitglied: { select: { id: true, email: true, name: true } } },
-  });
-  if (!sitzung || sitzung.gueltigBis < new Date()) return null;
-  return sitzung.mitglied;
+  for (const token of cookieWerte(request)) {
+    const sitzung = await db.teamSitzung.findUnique({
+      where: { tokenHash: sha256(token) },
+      include: { mitglied: { select: { id: true, email: true, name: true } } },
+    });
+    if (sitzung && sitzung.gueltigBis >= new Date()) return sitzung.mitglied;
+  }
+  return null;
 }
 
 /** Für geschützte Seiten: angemeldetes Teammitglied oder Weiterleitung zur Anmeldung. */
@@ -191,8 +192,8 @@ export async function verlangeTeam(db: PrismaClient, request: Request): Promise<
 }
 
 export async function meldeAb(db: PrismaClient, request: Request) {
-  const token = cookieWert(request);
-  if (token) await db.teamSitzung.deleteMany({ where: { tokenHash: sha256(token) } });
+  const tokens = cookieWerte(request);
+  if (tokens.length > 0) await db.teamSitzung.deleteMany({ where: { tokenHash: { in: tokens.map(sha256) } } });
 }
 
 /**
