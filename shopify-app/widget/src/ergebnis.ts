@@ -87,13 +87,13 @@ export function kurzSatz(g: GroessenAnsicht, passform: Passform): string {
 }
 
 /** „Warum 40?“ – aus der wichtigsten Zone des Artikels. */
-export function warumSatz(g: GroessenAnsicht, primaer: Zone, passform: Passform): string {
+export function warumSatz(g: GroessenAnsicht, primaer: Zone, passform: Passform, du = false): string {
   const z = wichtigste(g, primaer);
-  if (!z) return `Diese Größe passt am besten zu Ihren Maßen und ${PASSFORM[passform].eine}.`;
+  if (!z) return `Diese Größe passt am besten zu ${du ? "deinen" : "Ihren"} Maßen und ${PASSFORM[passform].eine}.`;
   const an = gross(ZONEN[z.zone].an);
   const raum =
     z.spielraum < 0
-      ? `${an} ist das Teil ${cm(z.spielraum)} schmaler als Ihr Maß, das Material gibt nach`
+      ? `${an} ist das Teil ${cm(z.spielraum)} schmaler als ${du ? "dein" : "Ihr"} Maß, das Material gibt nach`
       : z.spielraum === 0
         ? `${an} liegt das Teil genau an`
         : `${an} bleiben ${cm(z.spielraum)} Spielraum`;
@@ -133,10 +133,10 @@ export function begrenztSatz(schnitt: Passform, passform: Passform): string {
 }
 
 /** Ersatz, wenn die empfohlene Größe ausverkauft ist (E15), z. B. „Etwas enger: an der Brust 4 cm Spielraum statt 8 cm.“ */
-export function ersatzSatz(empfohlen: GroessenAnsicht, ersatz: GroessenAnsicht, primaer: Zone): string {
+export function ersatzSatz(empfohlen: GroessenAnsicht, ersatz: GroessenAnsicht, primaer: Zone, du = false): string {
   const h = wichtigste(empfohlen, primaer);
   const e = ersatz.zonen.find((z) => z.zone === h?.zone);
-  if (!h || !e) return "Die nächstbeste Größe für Ihre Maße.";
+  if (!h || !e) return `Die nächstbeste Größe für ${du ? "deine" : "Ihre"} Maße.`;
   const richtung = e.spielraum < h.spielraum ? "Etwas enger" : e.spielraum > h.spielraum ? "Etwas weiter" : "Ähnlich";
   return `${richtung}: ${ZONEN[h.zone].an} ${cm(e.spielraum)} Spielraum statt ${cm(h.spielraum)}.`;
 }

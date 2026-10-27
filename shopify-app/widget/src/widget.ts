@@ -11,7 +11,7 @@
 
 import { ALTERSGRUPPEN, EINWILLIGUNGEN } from "../../app/kundin/texte";
 import { STIL } from "./stil";
-import { FELDER, alsZahl, pruefeEingaben } from "./eingaben";
+import { FELDER, alsZahl, bereichText, fehltText, pruefeEingaben } from "./eingaben";
 import {
   begrenztSatz,
   bewertungText,
@@ -34,7 +34,7 @@ import { pruefePlausibel } from "./plausi";
 import { silhouette } from "./silhouette";
 import { waehleGroesse } from "./auswahl";
 import type { Hinweis, PlausiKonfig } from "./plausi";
-import { MESS_HINWEIS, SCHRITTE } from "./texte";
+import { MESS_HINWEIS, schrittTexte } from "./texte";
 
 type Passform = "koerpernah" | "regulaer" | "locker" | "oversized";
 const PASSFORMEN: [Passform, string][] = [
@@ -132,6 +132,8 @@ class Widget {
   private taillePflicht = false;
   private tailleGewertet = false;
   private plausi: PlausiKonfig = STANDARD_PLAUSI;
+  /** Ansprache „du“ statt „Sie“ (stellt der Händler ein, Standard: Sie). */
+  private du = false;
   private einwilligung = false;
   private alter16 = false;
   private roh: Rohwerte = {};
@@ -261,6 +263,7 @@ class Widget {
         tailleGewertet?: boolean;
         meinUrl?: string | null;
         plausibilitaet?: PlausiKonfig;
+        ansprache?: "sie" | "du";
       };
       if (!antwort.ok) throw new Error("Antwort");
       if (!daten.vermessen) return this.wechsle("nicht_vermessen");
@@ -268,6 +271,7 @@ class Widget {
       this.tailleGewertet = Boolean(daten.tailleGewertet);
       this.meinUrl = daten.meinUrl && daten.meinUrl.startsWith("https://") ? daten.meinUrl : null;
       if (daten.plausibilitaet) this.plausi = daten.plausibilitaet;
+      this.du = daten.ansprache === "du";
 
       this.token = tokenSpeicher.lesen();
       if (this.token) {
@@ -318,7 +322,7 @@ class Widget {
   private async berechne(mitEingaben: boolean) {
     let koerper: Koerper | undefined;
     if (mitEingaben) {
-      const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
+      const pruefung = pruefeEingaben(this.roh, this.taillePflicht, this.du);
       if (!pruefung.ok) {
         // Sollte durch die Schritte nicht vorkommen – zur Sicherheit zum ersten fehlerhaften Schritt.
         this.feldFehler = pruefung.fehler;
@@ -381,7 +385,7 @@ class Widget {
 
   /** Passform-Umschalter im Ergebnis: direkt neu rechnen (angemeldet mit dem gespeicherten Profil). */
   private async rechneSofort() {
-    const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
+    const pruefung = pruefeEingaben(this.roh, this.taillePflicht, this.du);
     const inhalt = this.token && this.profil ? { token: this.token } : pruefung.ok ? { koerper: pruefung.koerper } : null;
     if (!inhalt) return;
     try {
@@ -429,8 +433,8 @@ class Widget {
     const feld = this.wurzel?.getElementById("ox-email") as HTMLInputElement | null;
     this.email = (feld?.value ?? this.email).trim();
     this.feldFehler = {};
-    if (!this.profilEinwilligung) this.feldFehler.profil = "Bitte bestätigen Sie die Einwilligung, damit wir Ihre Maße speichern dürfen.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email)) this.feldFehler.email = "Bitte geben Sie eine gültige E-Mail-Adresse ein.";
+    if (!this.profilEinwilligung) this.feldFehler.profil = this.t("Bitte bestätigen Sie die Einwilligung, damit wir Ihre Maße speichern dürfen.", "Bitte bestätige die Einwilligung, damit wir deine Maße speichern dürfen.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email)) this.feldFehler.email = this.t("Bitte geben Sie eine gültige E-Mail-Adresse ein.", "Bitte gib eine gültige E-Mail-Adresse ein.");
     if (Object.keys(this.feldFehler).length > 0) return this.zeichne();
     try {
       const { status } = await this.post("konto", { aktion: "code_anfordern", email: this.email });
@@ -442,7 +446,7 @@ class Widget {
   }
 
   private async pruefeCode(code: string) {
-    const pruefung = pruefeEingaben(this.roh, this.taillePflicht);
+    const pruefung = pruefeEingaben(this.roh, this.taillePflicht, this.du);
     try {
       const { status, daten } = await this.post<{ ok?: boolean; token?: string }>("konto", {
         aktion: "code_pruefen",
@@ -452,7 +456,7 @@ class Widget {
         ...(pruefung.ok ? { profil: this.mitAltersgruppe(pruefung.koerper) } : {}),
       });
       if (status === 401) {
-        this.feldFehler = { code: "Der Code stimmt nicht oder ist abgelaufen. Bitte prüfen Sie ihn oder fordern Sie einen neuen an." };
+        this.feldFehler = { code: this.t("Der Code stimmt nicht oder ist abgelaufen. Bitte prüfen Sie ihn oder fordern Sie einen neuen an.", "Der Code stimmt nicht oder ist abgelaufen. Bitte prüf ihn oder fordere einen neuen an.") };
         return this.zeichne();
       }
       if (status !== 200 || !daten.token) throw new Error("Antwort");
@@ -460,7 +464,7 @@ class Widget {
       tokenSpeicher.schreiben(daten.token);
       if (pruefung.ok) this.profil = this.mitAltersgruppe(pruefung.koerper);
       this.email = "";
-      this.meldung = "Ihre Maße sind gespeichert. Beim nächsten Mal wählen Sie nur noch die Passform.";
+      this.meldung = this.t("Ihre Maße sind gespeichert. Beim nächsten Mal wählen Sie nur noch die Passform.", "Deine Maße sind gespeichert. Beim nächsten Mal wählst du nur noch die Passform.");
       this.wechsle("ergebnis");
       this.sage(this.meldung);
     } catch {
@@ -518,7 +522,7 @@ class Widget {
 
     if (wert === null) {
       if (pflicht) {
-        this.feldFehler[feld] = `Bitte geben Sie Ihren ${regel.beschriftung} in cm ein.`;
+        this.feldFehler[feld] = fehltText(feld, this.du);
         return this.zeichneUndFokus(`ox-${feld}`);
       }
       return this.naechsterSchritt();
@@ -529,7 +533,7 @@ class Widget {
     }
 
     if (this.bestaetigt[feld] !== roh) {
-      const hinweis = pruefePlausibel(feld, wert, this.andereWerte(feld), this.plausi);
+      const hinweis = pruefePlausibel(feld, wert, this.andereWerte(feld), this.plausi, this.du);
       if (hinweis) {
         this.hinweis = { feld, hinweis };
         this.zeichne();
@@ -539,7 +543,7 @@ class Widget {
     }
 
     if (wert < regel.min || wert > regel.max) {
-      this.feldFehler[feld] = `Bitte prüfen Sie den Wert. Erwartet wird ein Wert zwischen ${regel.min} und ${regel.max} cm.`;
+      this.feldFehler[feld] = bereichText(regel.min, regel.max, this.du);
       return this.zeichneUndFokus(`ox-${feld}`);
     }
     this.naechsterSchritt();
@@ -668,7 +672,7 @@ class Widget {
         this.feldFehler = {};
         return this.wechsle("speichern");
       case "code-erneut":
-        this.meldung = "Wir haben Ihnen einen neuen Code geschickt.";
+        this.meldung = this.t("Wir haben Ihnen einen neuen Code geschickt.", "Wir haben dir einen neuen Code geschickt.");
         return void this.fordereCodeAn();
       case "andere-email":
         this.meldung = "";
@@ -748,6 +752,11 @@ class Widget {
     if (id) this.wurzel?.getElementById(id)?.focus();
   }
 
+  /** Text in der eingestellten Ansprache. */
+  private t(sie: string, du: string) {
+    return this.du ? du : sie;
+  }
+
   private sage(text: string) {
     const ansage = this.wurzel?.querySelector("[data-ansage]");
     if (ansage) ansage.textContent = text;
@@ -758,7 +767,7 @@ class Widget {
     if (!r) return "";
     if (this.ansicht === "vergleich" && r.vergleich) return `Ansicht: So säße ${r.vergleich.groesse}.`;
     if (r.status === "empfohlen" && r.recommended_size) {
-      if (r.alternative_size) return `Sie liegen zwischen ${r.recommended_size} und ${r.alternative_size}, Passform ${this.passformText()}.`;
+      if (r.alternative_size) return `${this.t("Sie liegen", "Du liegst")} zwischen ${r.recommended_size} und ${r.alternative_size}, Passform ${this.passformText()}.`;
       return `Empfohlene Größe ${r.recommended_size}, Passform ${this.passformText()}.`;
     }
     if (r.status === "unsicher") return "Keine sichere Größenempfehlung. Die Passform je Zone ist aufgeklappt.";
@@ -789,7 +798,7 @@ class Widget {
       const felder = this.messFelder();
       const gesamt = felder.length;
       const nummer = this.schritt === "passform" ? gesamt : this.messIndex + 1;
-      const titel = this.schritt === "passform" ? "Passform" : `${SCHRITTE[this.aktuellesFeld()].kurz} · ${nummer} von ${gesamt}`;
+      const titel = this.schritt === "passform" ? "Passform" : `${schrittTexte(this.du)[this.aktuellesFeld()].kurz} · ${nummer} von ${gesamt}`;
       const anteil = this.schritt === "passform" ? 100 : Math.round((nummer / (gesamt + 1)) * 100);
       return `<div class="kopf-schritt">
           <button type="button" class="zurueck" data-aktion="zurueck" aria-label="Zurück">‹</button>
@@ -807,11 +816,11 @@ class Widget {
         return `<h2 id="ox-titel" tabindex="-1">Einen Moment …</h2><p class="leise">Die Größenberatung wird geladen.</p>`;
       case "nicht_vermessen":
         return `<h2 id="ox-titel" tabindex="-1">Für diesen Artikel gibt es noch keine Größenberatung</h2>
-          <p>Bitte nutzen Sie die Größentabelle des Shops.</p>
+          <p>${this.t("Bitte nutzen Sie die Größentabelle des Shops.", "Bitte nutz die Größentabelle des Shops.")}</p>
           <button type="button" class="primaer" data-aktion="schliessen">Schließen</button>`;
       case "fehler":
         return `<h2 id="ox-titel" tabindex="-1">Die Größenberatung ist gerade nicht erreichbar</h2>
-          <p>Bitte versuchen Sie es gleich noch einmal oder nutzen Sie die Größentabelle des Shops.</p>
+          <p>${this.t("Bitte versuchen Sie es gleich noch einmal oder nutzen Sie die Größentabelle des Shops.", "Bitte versuch es gleich noch einmal oder nutz die Größentabelle des Shops.")}</p>
           <button type="button" class="primaer" data-aktion="erneut">Noch einmal versuchen</button>
           <button type="button" class="sekundaer" data-aktion="schliessen">Schließen</button>`;
       case "einwilligung":
@@ -835,9 +844,9 @@ class Widget {
 
   private htmlEinwilligung() {
     const bereit = this.einwilligung && this.alter16;
-    return `<h2 id="ox-titel" tabindex="-1">Ihre Größe in wenigen Schritten</h2>
+    return `<h2 id="ox-titel" tabindex="-1">${this.t("Ihre", "Deine")} Größe in wenigen Schritten</h2>
       <span class="entwurf">Entwurf · Text wird noch rechtlich geprüft</span>
-      <p>Ommetryx vergleicht Ihre Körpermaße mit den gemessenen Maßen dieses Kleidungsstücks und empfiehlt Ihnen eine Größe.</p>
+      <p>${this.t("Ommetryx vergleicht Ihre Körpermaße mit den gemessenen Maßen dieses Kleidungsstücks und empfiehlt Ihnen eine Größe.", "Ommetryx vergleicht deine Körpermaße mit den gemessenen Maßen dieses Kleidungsstücks und empfiehlt dir eine Größe.")}</p>
       <div class="karte">
         <label class="wahl">
           <input type="checkbox" name="einwilligung" ${this.einwilligung ? "checked" : ""} />
@@ -854,7 +863,7 @@ class Widget {
 
   private htmlWillkommen() {
     return `<h2 id="ox-titel" tabindex="-1">Willkommen zurück</h2>
-      <p>Ihre Maße sind gespeichert. Wählen Sie nur noch, wie dieses Teil sitzen soll.</p>
+      <p>${this.t("Ihre Maße sind gespeichert. Wählen Sie nur noch, wie dieses Teil sitzen soll.", "Deine Maße sind gespeichert. Wähl nur noch, wie dieses Teil sitzen soll.")}</p>
       <form novalidate data-formular="willkommen">${this.htmlPassform()}</form>
       <button type="button" class="primaer" data-aktion="willkommen-rechnen">Größe berechnen</button>
       <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
@@ -865,7 +874,7 @@ class Widget {
   /** Ein Mess-Schritt (Figma E03–E06): Video-Platzhalter, Frage, Warum, Zahlenfeld, Kurz-Tipp, Nachfrage. */
   private htmlMessen() {
     const feld = this.aktuellesFeld();
-    const t = SCHRITTE[feld];
+    const t = schrittTexte(this.du)[feld];
     const id = `ox-${feld}`;
     const fehler = this.feldFehler[feld];
     const optional = feld === "taille" && !this.taillePflicht;
@@ -895,7 +904,7 @@ class Widget {
           <p class="leise">${escape(MESS_HINWEIS)}</p>
         </details>
         <button type="button" class="karte-knopf" data-aktion="schliessen">
-          <span><strong>Kein Maßband zur Hand?</strong><span>Dann nutzen Sie bitte die Größentabelle des Shops.</span></span>
+          <span><strong>Kein Maßband zur Hand?</strong><span>${this.t("Dann nutzen Sie bitte die Größentabelle des Shops.", "Dann nutz bitte die Größentabelle des Shops.")}</span></span>
           <span aria-hidden="true">›</span>
         </button>
         <div class="fuss"><button type="submit" class="primaer">${this.einzelAenderung ? "Neu berechnen" : letzter ? "Weiter zur Passform" : "Weiter"}</button></div>
@@ -951,10 +960,10 @@ class Widget {
 
   /** Ladebildschirm (Figma E36/E36b). Stufen und Häkchen setzt setzeEtappe, ohne neu zu zeichnen. */
   private htmlBerechnung() {
-    const schritte = ["Ihre Maße", "Echte Maße dieses Artikels", `Passform „${this.passformText()}“`];
+    const schritte = [this.t("Ihre Maße", "Deine Maße"), "Echte Maße dieses Artikels", `Passform „${this.passformText()}“`];
     return `<div class="berechnung">
         ${logoHtml(BASIS)}
-        <h2 id="ox-titel" tabindex="-1">Wir vergleichen Ihre Maße mit den echten Maßen dieses Artikels</h2>
+        <h2 id="ox-titel" tabindex="-1">Wir vergleichen ${this.t("Ihre", "deine")} Maße mit den echten Maßen dieses Artikels</h2>
         <ol class="schritte-liste">
           ${schritte.map((s) => `<li><span class="marke-punkt" aria-hidden="true"></span>${escape(s)}</li>`).join("")}
         </ol>
@@ -973,7 +982,7 @@ class Widget {
           <div class="folge">
             <div class="karte-ergebnis">
               <h2 id="ox-titel" tabindex="-1">Keine Größe passt gut genug</h2>
-              <p>Bei diesem Artikel passt Ihnen mit dieser Passform leider keine Größe gut genug. Vielleicht klappt es mit einer anderen Passform, sonst hilft die Größentabelle des Shops.</p>
+              <p>Bei diesem Artikel passt ${this.t("Ihnen", "dir")} mit dieser Passform leider keine Größe gut genug. Vielleicht klappt es mit einer anderen Passform, sonst hilft die Größentabelle des Shops.</p>
             </div>
             ${this.htmlAngaben()}
             ${this.htmlKonto()}
@@ -996,12 +1005,12 @@ class Widget {
     if (unsicher) {
       karte = `<div class="karte-ergebnis">
           <h2 id="ox-titel" tabindex="-1">Wir sind uns bei diesem Artikel nicht sicher</h2>
-          <p class="leise">Ihre Maße passen nicht eindeutig zu einer Größe. Unten sehen Sie, wie ${escape(haupt.groesse)}${vergleich ? ` und ${escape(vergleich.groesse)}` : ""} sitzen würden.</p>
+          <p class="leise">${this.t("Ihre Maße passen nicht eindeutig zu einer Größe. Unten sehen Sie, wie", "Deine Maße passen nicht eindeutig zu einer Größe. Unten siehst du, wie")} ${escape(haupt.groesse)}${vergleich ? ` und ${escape(vergleich.groesse)}` : ""} sitzen würden.</p>
         </div>`;
     } else if (zwischen && vergleich) {
       karte = `<div class="karte-zwei">
           <div class="zwei-kopf">
-            <h2 id="ox-titel" tabindex="-1">Sie liegen zwischen ${escape(haupt.groesse)} und ${escape(vergleich.groesse)}</h2>
+            <h2 id="ox-titel" tabindex="-1">${this.t("Sie liegen", "Du liegst")} zwischen ${escape(haupt.groesse)} und ${escape(vergleich.groesse)}</h2>
             <span class="marke-klein">beide möglich</span>
           </div>
           <div class="zwei-raster">
@@ -1015,12 +1024,12 @@ class Widget {
       karte = `<div class="karte-ergebnis mit-kreis">
           <div class="kreis" aria-hidden="true"><span>${escape(zeigt.groesse)}</span></div>
           <div>
-            <h2 id="ox-titel" tabindex="-1">${istVergleich ? `So säße ${escape(zeigt.groesse)}` : `Ihre Größe: ${escape(zeigt.groesse)}`}</h2>
+            <h2 id="ox-titel" tabindex="-1">${istVergleich ? `So säße ${escape(zeigt.groesse)}` : `${this.t("Ihre", "Deine")} Größe: ${escape(zeigt.groesse)}`}</h2>
             <p>${escape(istVergleich ? vergleichSatz(haupt, zeigt, r.primaer) : kurzSatz(zeigt, this.passform))}</p>
             <p class="leise">${istVergleich ? `Empfohlen bleibt ${escape(haupt.groesse)}` : `Empfehlung: ${sicherheitText(r.confidence)}`}</p>
           </div>
         </div>`;
-      warum = `<p><strong>Warum ${escape(haupt.groesse)}?</strong> ${escape(warumSatz(haupt, r.primaer, this.passform))}</p>`;
+      warum = `<p><strong>Warum ${escape(haupt.groesse)}?</strong> ${escape(warumSatz(haupt, r.primaer, this.passform, this.du))}</p>`;
     }
 
     const ziel = this.uebernahmeZiel();
@@ -1031,7 +1040,7 @@ class Widget {
       karte = `<div class="karte ausverkauft">
           <span class="groesse-rahmen" aria-hidden="true">${escape(haupt.groesse)}</span>
           <div>
-            <h2 id="ox-titel" tabindex="-1">Ihre Größe ${escape(haupt.groesse)} ist gerade ausverkauft</h2>
+            <h2 id="ox-titel" tabindex="-1">${this.t("Ihre", "Deine")} Größe ${escape(haupt.groesse)} ist gerade ausverkauft</h2>
             <p class="leise">Für eine Passform „${escape(passformWort(this.passform))}“</p>
           </div>
         </div>
@@ -1040,9 +1049,9 @@ class Widget {
             ? `<p class="ueberschrift-klein">Nächstbeste verfügbare Größe</p>
                <div class="karte-ergebnis mit-kreis ersatz">
                  <span class="groesse-ink" aria-hidden="true">${escape(ersatz.groesse)}</span>
-                 <p><span class="nur-vorleser">Größe ${escape(ersatz.groesse)}: </span>${escape(ersatzSatz(haupt, ersatz, r.primaer))}</p>
+                 <p><span class="nur-vorleser">Größe ${escape(ersatz.groesse)}: </span>${escape(ersatzSatz(haupt, ersatz, r.primaer, this.du))}</p>
                </div>`
-            : `<p>Eine andere passende Größe ist gerade auch nicht verfügbar. Schauen Sie gern später noch einmal vorbei.</p>`
+            : `<p>Eine andere passende Größe ist gerade auch nicht verfügbar. ${this.t("Schauen Sie", "Schau")} gern später noch einmal vorbei.</p>`
         }`;
     }
 
@@ -1119,10 +1128,10 @@ class Widget {
           <button type="button" class="link" data-aktion="feld-aendern" data-feld="${f}" aria-label="${escape(regel.beschriftung)} ändern">Ändern</button></li>`;
       })
       .join("");
-    return `<section class="karte angaben" id="ox-angaben" tabindex="-1" aria-label="Ihre Angaben">
-        <div class="angaben-kopf"><strong>Ihre Angaben</strong><button type="button" class="link" data-aktion="angaben">Schließen</button></div>
+    return `<section class="karte angaben" id="ox-angaben" tabindex="-1" aria-label="${this.t("Ihre", "Deine")} Angaben">
+        <div class="angaben-kopf"><strong>${this.t("Ihre", "Deine")} Angaben</strong><button type="button" class="link" data-aktion="angaben">Schließen</button></div>
         <ul>${zeilen}</ul>
-        <p class="leise">Nach dem Ändern kommen Sie direkt hierher zurück.</p>
+        <p class="leise">${this.t("Nach dem Ändern kommen Sie direkt hierher zurück.", "Nach dem Ändern kommst du direkt hierher zurück.")}</p>
       </section>`;
   }
 
@@ -1130,7 +1139,7 @@ class Widget {
   private htmlKonto() {
     if (!this.token) return "";
     return `<div>
-        ${this.meldung ? `<p class="karte" role="status">${escape(this.meldung)}</p>` : `<p class="leise">Ihre Maße sind gespeichert.</p>`}
+        ${this.meldung ? `<p class="karte" role="status">${escape(this.meldung)}</p>` : `<p class="leise">${this.t("Ihre", "Deine")} Maße sind gespeichert.</p>`}
         ${this.meinLink()}
         <button type="button" class="link" data-aktion="abmelden">Abmelden</button>
       </div>`;
@@ -1167,8 +1176,8 @@ class Widget {
     if (!status || ergebnis === "neu_laden") return;
     status.textContent =
       ergebnis === "ausgewaehlt"
-        ? `✓ Größe ${ziel.groesse} ausgewählt${empfohlen ? ` · passt ${passform}` : ""}. Sie können direkt bestellen.`
-        : `Ommetryx empfiehlt Größe ${ziel.groesse}. Bitte wählen Sie diese Größe in der Größenauswahl aus.`;
+        ? `✓ Größe ${ziel.groesse} ausgewählt${empfohlen ? ` · passt ${passform}` : ""}. ${this.t("Sie können", "Du kannst")} direkt bestellen.`
+        : `Ommetryx empfiehlt Größe ${ziel.groesse}. ${this.t("Bitte wählen Sie", "Bitte wähl")} diese Größe in der Größenauswahl aus.`;
     status.hidden = false;
   }
 
@@ -1182,7 +1191,7 @@ class Widget {
     const f = this.feldFehler;
     return `<h2 id="ox-titel" tabindex="-1">Maße speichern</h2>
       <span class="entwurf">Entwurf · Text wird noch rechtlich geprüft</span>
-      <p>Mit einem Profil müssen Sie beim nächsten Einkauf nicht neu messen – auch in anderen Shops mit Ommetryx. Sie melden sich ohne Passwort an: Wir schicken Ihnen einen Code per E-Mail.</p>
+      <p>${this.t("Mit einem Profil müssen Sie beim nächsten Einkauf nicht neu messen – auch in anderen Shops mit Ommetryx. Sie melden sich ohne Passwort an: Wir schicken Ihnen einen Code per E-Mail.", "Mit einem Profil musst du beim nächsten Einkauf nicht neu messen – auch in anderen Shops mit Ommetryx. Du meldest dich ohne Passwort an: Wir schicken dir einen Code per E-Mail.")}</p>
       <form novalidate data-formular="speichern">
         <div class="karte">
           <label class="wahl">

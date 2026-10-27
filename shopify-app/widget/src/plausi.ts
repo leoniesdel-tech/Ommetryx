@@ -48,37 +48,38 @@ export function erwarteterWert(feld: Feld, andere: Partial<Record<Feld, number>>
   return schaetzungen.reduce((a, b) => a + b, 0) / schaetzungen.length;
 }
 
-export function pruefePlausibel(feld: Feld, wert: number, andere: Partial<Record<Feld, number>>, k: PlausiKonfig): Hinweis {
+export function pruefePlausibel(feld: Feld, wert: number, andere: Partial<Record<Feld, number>>, k: PlausiKonfig, du = false): Hinweis {
+  const meinten = du ? "Meintest du" : "Meinten Sie";
   if (feld === "koerpergroesse") {
     if (wert >= 1 && wert <= 2.3) {
       const cm = Math.round(wert * 100);
       const meter = wert.toLocaleString("de-DE", { maximumFractionDigits: 2 });
-      return { art: "vorschlag", wert: cm, frage: `${meter} m? Meinten Sie ${cm} cm?` };
+      return { art: "vorschlag", wert: cm, frage: `${meter} m? ${meinten} ${cm} cm?` };
     }
     if (!imBereich(feld, wert) && imBereich(feld, wert / 10)) {
-      return { art: "vorschlag", wert: wert / 10, frage: `${zahl(wert)} cm? Meinten Sie ${zahl(wert / 10)} cm?` };
+      return { art: "vorschlag", wert: wert / 10, frage: `${zahl(wert)} cm? ${meinten} ${zahl(wert / 10)} cm?` };
     }
     return null;
   }
 
   if (!imBereich(feld, wert) && imBereich(feld, wert / 10)) {
-    return { art: "vorschlag", wert: wert / 10, frage: `${zahl(wert)} cm? Meinten Sie ${zahl(wert / 10)} cm?` };
+    return { art: "vorschlag", wert: wert / 10, frage: `${zahl(wert)} cm? ${meinten} ${zahl(wert / 10)} cm?` };
   }
 
   const zollGrenze = ZOLL_VERDACHT_UNTER[feld];
   if (zollGrenze !== undefined && wert < zollGrenze && imBereich(feld, Math.round(wert * ZOLL_CM))) {
     const cm = Math.round(wert * ZOLL_CM);
-    return { art: "vorschlag", wert: cm, frage: `Haben Sie in Zoll gemessen? ${zahl(wert)} Zoll sind etwa ${cm} cm.` };
+    return { art: "vorschlag", wert: cm, frage: `${du ? "Hast du" : "Haben Sie"} in Zoll gemessen? ${zahl(wert)} Zoll sind etwa ${cm} cm.` };
   }
 
   const erwartet = erwarteterWert(feld, andere, k);
   if (erwartet !== null && Math.abs(wert - erwartet) > k.abweichung_cm) {
     const name = NAMEN[feld];
     const klein = wert < erwartet;
-    const zusatz = feld === "huefte" && klein ? " Sie wird oft zu klein gemessen." : "";
+    const zusatz = feld === "huefte" && klein ? (du ? " Die Hüfte wird oft zu klein gemessen." : " Sie wird oft zu klein gemessen.") : "";
     return {
       art: "nachmessen",
-      text: `Die ${name} wirkt im Vergleich zu Ihren anderen Maßen ${klein ? "klein" : "groß"}.${zusatz}`,
+      text: `Die ${name} wirkt im Vergleich zu ${du ? "deinen" : "Ihren"} anderen Maßen ${klein ? "klein" : "groß"}.${zusatz}`,
     };
   }
   return null;

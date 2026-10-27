@@ -357,4 +357,11 @@ Bis zur Klärung nicht raten.
 - Seite `app/routes/app.einstellungen.tsx`: Button-Text, Ansprache Sie/du (Einstellung gespeichert, Du-Texte folgen in 9c-2), Datenschutz-Link (nur https), Gestaltung theme/ommetryx/eigen mit Darstellung, Farbe, Ecken, Symbol; Vorschau (`app/haendler/ButtonVorschau.tsx`, Logo-Dateien in `public/marke/`) und Lesbarkeits-Check. Speichern-Leiste über `SaveBar` aus app-bridge-react, gesteuert über „Werte ≠ gespeicherter Stand“ (`data-save-bar` blieb nach Verwerfen stehen).
 - Speichern schreibt DB + App-Metafeld `ommetryx.button` (JSON, nur Button-Werte). Block rendert daraus den Button (Klassen `ox-knopf--gefuellt/umrandet/link`, Fokusrahmen immer sichtbar); Text-Einstellung im Theme-Editor entfernt. Farbige Bildmarke als Snippet `snippets/ox-bildmarke.liquid`, erzeugt mit `npx tsx scripts/bildmarke-snippet.ts` aus `widget/src/logo.ts`; einfarbige Bildmarke `assets/ox-zeichen.svg` (Figma 56:483) als Maske in currentColor.
 - Shopify-Admin ist auf Englisch → Save-Bar-Knöpfe heißen „Save/Discard“ (beschriftet Shopify selbst).
-- **Nächster Schritt:** 9c-2 Du-Texte im Widget (Leonie liest gegen), dann 9d.
+
+**Etappe 9c-2 Du-Texte (27.10., Tests grün; Gegenlesen durch Leonie offen)**
+- Ansprache kommt mit der Artikel-Antwort des Proxys (`ansprache: "sie"|"du"` aus den Händler-Einstellungen). Widget: `this.t(sie, du)` für jeden sichtbaren Text mit Anrede; `schrittTexte(du)`, `pruefePlausibel(…, du)`, `warumSatz/ersatzSatz(…, du)`, `fehltText/bereichText(…, du)`.
+- Test `test/ansprache.test.ts` liest `widget.ts` und schlägt an, wenn ein Text mit Sie/Ihr/Ihnen nicht über `this.t` läuft oder die Du-Fassung „Sie“ enthält.
+- Einwilligungen (Ich-Form) unverändert; „Mein Ommetryx“ und Code-Mail bleiben bei „Sie“ (eigene Seite) – Leonie fragen, ob ok.
+- Grammatik korrigiert: „Bitte geben Sie Ihre Körpergröße …“ (vorher „Ihren“).
+- Gegenlese-Liste: `docs/du-texte-gegenlesen.md` im Gründungssemester-Ordner (35 Stellen).
+- **Nächster Schritt:** Leonies Korrekturen zu den Du-Texten einarbeiten, dann 9d (Datenschutz & Verträge, Hilfe, Muster-Versand).

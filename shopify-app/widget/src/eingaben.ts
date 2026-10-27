@@ -24,19 +24,32 @@ export function alsZahl(text: string | undefined): number | null {
   return /^\d+(\.\d+)?$/.test(sauber) ? Number(sauber) : Number.NaN;
 }
 
+/** „Bitte geben Sie Ihre Körpergröße …“ / „Bitte gib deinen Brustumfang …“ – mit passendem Artikel je Feld. */
+export function fehltText(feld: Feld, du = false): string {
+  const beschriftung = FELDER.find((f) => f.feld === feld)!.beschriftung;
+  const weiblich = feld === "koerpergroesse";
+  const dein = du ? (weiblich ? "deine" : "deinen") : weiblich ? "Ihre" : "Ihren";
+  return du ? `Bitte gib ${dein} ${beschriftung} in cm ein.` : `Bitte geben Sie ${dein} ${beschriftung} in cm ein.`;
+}
+
+export function bereichText(min: number, max: number, du = false): string {
+  return `${du ? "Bitte prüf den Wert." : "Bitte prüfen Sie den Wert."} Erwartet wird ein Wert zwischen ${min} und ${max} cm.`;
+}
+
 /** Prüft die Eingaben. Fehlertexte enthalten keine eingegebenen Werte. */
 export function pruefeEingaben(
   roh: Rohwerte,
   taillePflicht: boolean,
+  du = false,
 ): { ok: true; koerper: Koerper } | { ok: false; fehler: Partial<Record<Feld, string>> } {
   const fehler: Partial<Record<Feld, string>> = {};
   const werte: Partial<Record<Feld, number>> = {};
 
-  for (const { feld, beschriftung, min, max } of FELDER) {
+  for (const { feld, min, max } of FELDER) {
     const zahl = alsZahl(roh[feld]);
     const pflicht = feld !== "taille" || taillePflicht;
     if (zahl === null) {
-      if (pflicht) fehler[feld] = `Bitte geben Sie Ihren ${beschriftung} in cm ein.`;
+      if (pflicht) fehler[feld] = fehltText(feld, du);
       continue;
     }
     if (Number.isNaN(zahl)) {
@@ -44,7 +57,7 @@ export function pruefeEingaben(
       continue;
     }
     if (zahl < min || zahl > max) {
-      fehler[feld] = `Bitte prüfen Sie den Wert. Erwartet wird ein Wert zwischen ${min} und ${max} cm.`;
+      fehler[feld] = bereichText(min, max, du);
       continue;
     }
     werte[feld] = zahl;

@@ -106,6 +106,7 @@ describe("Artikel-Abfrage", () => {
       tailleGewertet: true,
       meinUrl: "https://ommetryx-test.example/mein",
       plausibilitaet: { abweichung_cm: 6, huefte_minus_brust_cm: 8, brust_minus_taille_cm: 16 },
+      ansprache: "sie",
     });
     expect(antwort.headers.get("Cache-Control")).toBe("no-store");
   });

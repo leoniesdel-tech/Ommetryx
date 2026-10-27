@@ -12,6 +12,7 @@ import { kundinAusToken } from "../kundin/login.server";
 import { ladeProfil } from "../kundin/profil.server";
 import { ladeArtikel } from "../models/artikel.server";
 import { aktiveKonfiguration } from "../models/konfiguration.server";
+import { ladeEinstellungen } from "../haendler/einstellungen.server";
 
 const mass = z.number().finite().min(30).max(250);
 
@@ -51,7 +52,7 @@ export async function artikelInfo(shop: string, produkt: string | null) {
   if (!produkt || !/^\d{1,20}$/.test(produkt)) return antwort({ fehler: "ungueltige_anfrage" }, 400);
   const artikel = await ladeArtikel(shop, produktGid(produkt));
   if (!artikel || artikel.status !== "vermessen") return antwort({ vermessen: false });
-  const k = await aktiveKonfiguration();
+  const [k, einstellungen] = await Promise.all([aktiveKonfiguration(), ladeEinstellungen(shop)]);
   const art = k.artikelart(artikel.artikelart);
   const taillePflicht = art.primaermass === "huefte" && Boolean(art.messpunkte.taille) && artikel.bundTyp !== "gummizug";
   return antwort({
@@ -60,6 +61,8 @@ export async function artikelInfo(shop: string, produkt: string | null) {
     tailleGewertet: Boolean(art.messpunkte.taille),
     meinUrl: meinOmmetryxUrl(),
     plausibilitaet: k.plausibilitaet,
+    // Sie oder du stellt der Händler ein (Standard: Sie).
+    ansprache: einstellungen.ansprache,
   });
 }
 
