@@ -333,4 +333,12 @@ Bis zur Klärung nicht raten.
 - Widget jetzt 63 KB (gzip 18 KB), lädt erst beim Klick; Lader unverändert 1,5 KB.
 - Nicht visuell mit echten Daten getestet: „zwischen zwei Größen“ und „unsicher“ (kommen bei der Test-Bluse nicht vor, Darstellung mit veränderter Antwort im Test-Browser geprüft). Direkter Größenwechsel per Klick nur im echten Shop prüfbar (siehe Falle oben); Rückfallweg `?variant=` funktioniert.
 - Offen/später: „Benachrichtigen, wenn wieder da“ (E15, nur wenn Händler es aktiviert), Statuszeile nach Neuladen fehlt (bewusst, kein Speicher).
-- **Nächster Schritt:** Leonie probiert 8b aus (auch im echten Shop), dann Etappe 9 planen (Händler-UI).
+- 8b von Leonie freigegeben (27.10.).
+
+**Etappe 9 Händler-Bereich (Plan 27.10. freigegeben):** 9a Gerüst/Startseite/Einrichtung/AVV-Sperre · 9b Produkte (Status nicht vermessen → vorgemerkt → in Vermessung → live, „keine Beratung nötig“; „geprüft“ entfällt vorerst) · 9c Einstellungen (Button-Text, Sie/du mit Du-Texten fürs Widget, Datenschutz-Link, Button-Design H10 mit Lesbarkeits-Check gegen Weiß und Linen, ohne read_themes) · 9d Datenschutz & Verträge (Entwurf), Hilfe, Muster-Versand als Anfrage (Etiketten von Hand). Nicht in 9: echte Kennzahlen, Umfrage, Vergleichsgruppe, Abo/Testphase, Regel für neue Produkte (Webhooks).
+
+**Etappe 9a (27.10., gebaut, im Admin noch nicht angesehen – braucht Leonies Shopify-Anmeldung)**
+- AVV-Sperre: `Shop.avvVersion/avvBestaetigtAm` (Migration `haendler_einrichtung`). `widget/aktiv.server.ts` prüft bei jeder Proxy-Anfrage; ohne AVV: Artikel → `{vermessen:false}`, sonst 403 `nicht_aktiv`. Nach Bestätigung setzt die App das App-Metafeld `ommetryx.aktiv` (Owner: currentAppInstallation); der Block zeigt den Button nur mit `app.metafields.ommetryx.aktiv`. Deinstallation löscht die AVV-Bestätigung (neu bestätigen nach Neuinstallation). AVV-Text `app/haendler/texte.ts`, Version `entwurf-2026-10-27`, als Entwurf markiert.
+- Startseite `app/routes/app._index.tsx` (Polaris-Web-Components, Muster „Setup guide“): Banner H09/„Widget ist aktiv“, 5 Schritte (AVV, Theme-Editor-Direktlink `shopify://admin/themes/current/editor?template=product&addAppBlockId={api_key}/groessenberater&target=mainSection`, Position abhaken, Artikel, Muster), „Später erinnern“, Abdeckung (productsCount), Kennzahlen leer. Widget-Status per App Bridge `app.extensions()` (keine Extra-Rechte). Beispielseite „Additional page“ entfernt.
+- **Achtung:** Seit 9a ist das Widget im Test-Shop aus, bis Leonie im Admin den AVV bestätigt.
+- Shopify-Prüfskripte der Plugins (validate.mjs) laufen hier nicht (fehlende Pakete); Typprüfung über `npx tsc` mit Polaris-Typen.

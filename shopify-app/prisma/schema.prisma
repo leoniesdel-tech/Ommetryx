@@ -177,6 +177,12 @@ model Shop {
   domain          String    @unique
   installiertAm   DateTime  @default(now()) @map("installiert_am")
   deinstalliertAm DateTime? @map("deinstalliert_am")
+  /// Auftragsverarbeitungsvertrag: ohne Bestätigung verarbeitet das Widget keine Körpermaße (Figma H09).
+  avvVersion      String?   @map("avv_version")
+  avvBestaetigtAm DateTime? @map("avv_bestaetigt_am")
+  /// Einrichtung auf der Startseite (Figma H01)
+  positionGeprueftAm      DateTime? @map("position_geprueft_am")
+  einrichtungAusgeblendet Boolean   @default(false) @map("einrichtung_ausgeblendet")
 
   artikel Artikel[]
 

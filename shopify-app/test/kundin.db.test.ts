@@ -51,7 +51,7 @@ async function anmelden(email = EMAIL) {
 beforeAll(async () => {
   // Testartikel für die Empfehlung mit Token
   await appDb.shop.deleteMany({ where: { domain: SHOP } });
-  const shop = await appDb.shop.create({ data: { domain: SHOP } });
+  const shop = await appDb.shop.create({ data: { domain: SHOP, avvVersion: "test", avvBestaetigtAm: new Date() } });
   await appDb.artikel.create({
     data: {
       shopId: shop.id,

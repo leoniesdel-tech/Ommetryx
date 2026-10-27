@@ -13,5 +13,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await db.session.deleteMany({ where: { shop } });
   }
 
+  // Mit der Deinstallation endet auch der AVV: Bei erneuter Installation muss er neu bestätigt werden.
+  // (App-Metafelder löscht Shopify selbst.)
+  await db.shop.updateMany({ where: { domain: shop }, data: { deinstalliertAm: new Date(), avvBestaetigtAm: null } });
+
   return new Response();
 };

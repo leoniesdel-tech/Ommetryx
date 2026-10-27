@@ -50,7 +50,7 @@ beforeAll(async () => {
   await db.session.create({
     data: { id: `offline_${SHOP}`, shop: SHOP, state: "", isOnline: false, accessToken: "erfunden", scope: "write_products" },
   });
-  const shop = await db.shop.create({ data: { domain: SHOP } });
+  const shop = await db.shop.create({ data: { domain: SHOP, avvVersion: "test", avvBestaetigtAm: new Date() } });
   await db.artikel.create({
     data: {
       shopId: shop.id,
@@ -156,5 +156,23 @@ describe("Empfehlung", () => {
       koerper: { koerpergroesse: 168, brust: 96, huefte: 102 },
     });
     expect((await empfehlungAction(aufrufArgs(anfrage))).status).toBe(404);
+  });
+});
+
+describe("AVV-Sperre (Figma H09)", () => {
+  it("ohne bestätigten AVV: kein Artikel, keine Empfehlung", async () => {
+    await db.shop.update({ where: { domain: SHOP }, data: { avvBestaetigtAm: null } });
+    try {
+      const artikel = await artikelLoader(aufrufArgs(new Request(signierteUrl("/proxy/artikel", { produkt: PRODUKT }))));
+      expect(await artikel.json()).toEqual({ vermessen: false });
+      const anfrage = post(signierteUrl("/proxy/empfehlung"), {
+        produkt: PRODUKT,
+        passform: "regulaer",
+        koerper: { koerpergroesse: 168, brust: 96, huefte: 102 },
+      });
+      expect((await empfehlungAction(aufrufArgs(anfrage))).status).toBe(403);
+    } finally {
+      await db.shop.update({ where: { domain: SHOP }, data: { avvBestaetigtAm: new Date() } });
+    }
   });
 });
