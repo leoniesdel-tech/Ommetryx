@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   begrenztSatz,
   entscheidungshilfe,
+  ersatzSatz,
   groessenKurz,
   kurzSatz,
   sicherheitText,
@@ -49,6 +50,12 @@ describe("Ergebnis-Texte", () => {
   it("zwischen zwei Größen (Figma E38)", () => {
     expect(entscheidungshilfe(g42, g40, "brust")).toBe("Lieber etwas enger: 40. Lieber etwas weiter: 42.");
     expect(groessenKurz(g40, "brust")).toBe("Brust 8 cm Spielraum, sitzt wie gewünscht.");
+  });
+
+  it("Ersatz, wenn die empfohlene Größe ausverkauft ist (Figma E15)", () => {
+    const g38: GroessenAnsicht = { groesse: "38", variante: "0", zonen: [{ zone: "brust", spielraum: 4, lage: -0.9, bewertung: "zu_eng" }] };
+    expect(ersatzSatz(g40, g38, "brust")).toBe("Etwas enger: an der Brust 4 cm Spielraum statt 8 cm.");
+    expect(ersatzSatz(g40, g42, "brust")).toBe("Etwas weiter: an der Brust 12 cm Spielraum statt 8 cm.");
   });
 
   it("Hinweis bei Begrenzung durch den Schnitt", () => {

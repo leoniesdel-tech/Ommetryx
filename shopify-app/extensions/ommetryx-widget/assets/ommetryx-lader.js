@@ -34,6 +34,7 @@
           produkt: einstieg.getAttribute("data-produkt"),
           proxy: einstieg.getAttribute("data-proxy"),
           ausloeser: knopf,
+          einstieg: einstieg,
         });
       })
       .catch(function () {

@@ -16,6 +16,7 @@ import {
   begrenztSatz,
   bewertungText,
   entscheidungshilfe,
+  ersatzSatz,
   groessenKurz,
   kurzSatz,
   passformWort,
@@ -31,6 +32,7 @@ import type { Feld, Koerper, Rohwerte } from "./eingaben";
 import { logoHtml } from "./logo";
 import { pruefePlausibel } from "./plausi";
 import { silhouette } from "./silhouette";
+import { waehleGroesse } from "./auswahl";
 import type { Hinweis, PlausiKonfig } from "./plausi";
 import { MESS_HINWEIS, SCHRITTE } from "./texte";
 
@@ -46,6 +48,8 @@ interface Einstellungen {
   produkt: string;
   proxy: string;
   ausloeser?: HTMLElement;
+  /** Unser App-Block auf der Produktseite (ausverkaufte Varianten, Statuszeile). */
+  einstieg?: HTMLElement;
 }
 
 type Ergebnis = WidgetErgebnis;
@@ -171,6 +175,10 @@ class Widget {
     this.meldung = "";
     this.hinweis = null;
     this.schritt = "laden";
+    // Jedes Öffnen beginnt beim ersten Mess-Schritt und mit der Empfehlung (nicht „So säße …“).
+    this.messIndex = 0;
+    this.ansicht = "haupt";
+    this.angabenOffen = false;
 
     // Eigenes Element statt <div>: Viele Themes (z. B. Dawn) haben „div:empty { display: none }“,
     // und ein Shadow-Host gilt für das Theme als leer. Die Inline-Regel schützt vor weiteren Theme-Stilen.
@@ -648,7 +656,7 @@ class Widget {
         return this.sage(this.ansageText());
       }
       case "uebernehmen":
-        return this.uebernehmen();
+        return void this.uebernehmen();
       case "erneut":
         this.wechsle("laden");
         return void this.starte();
@@ -983,7 +991,7 @@ class Widget {
     const zwischen = r.status === "empfohlen" && Boolean(r.alternative_size) && vergleich !== null;
     const unsicher = r.status === "unsicher";
 
-    let karte: string;
+    let karte = "";
     let warum = "";
     if (unsicher) {
       karte = `<div class="karte-ergebnis">
@@ -1015,6 +1023,29 @@ class Widget {
       warum = `<p><strong>Warum ${escape(haupt.groesse)}?</strong> ${escape(warumSatz(haupt, r.primaer, this.passform))}</p>`;
     }
 
+    const ziel = this.uebernahmeZiel();
+    // Empfohlene Größe ausverkauft (E15): Hinweis statt Kreis, nächstbeste verfügbare Größe anbieten.
+    if (!unsicher && !zwischen && zeigt === haupt && this.ausverkauft(haupt)) {
+      const ersatz = ziel && ziel !== haupt ? ziel : null;
+      warum = "";
+      karte = `<div class="karte ausverkauft">
+          <span class="groesse-rahmen" aria-hidden="true">${escape(haupt.groesse)}</span>
+          <div>
+            <h2 id="ox-titel" tabindex="-1">Ihre Größe ${escape(haupt.groesse)} ist gerade ausverkauft</h2>
+            <p class="leise">Für eine Passform „${escape(passformWort(this.passform))}“</p>
+          </div>
+        </div>
+        ${
+          ersatz
+            ? `<p class="ueberschrift-klein">Nächstbeste verfügbare Größe</p>
+               <div class="karte-ergebnis mit-kreis ersatz">
+                 <span class="groesse-ink" aria-hidden="true">${escape(ersatz.groesse)}</span>
+                 <p><span class="nur-vorleser">Größe ${escape(ersatz.groesse)}: </span>${escape(ersatzSatz(haupt, ersatz, r.primaer))}</p>
+               </div>`
+            : `<p>Eine andere passende Größe ist gerade auch nicht verfügbar. Schauen Sie gern später noch einmal vorbei.</p>`
+        }`;
+    }
+
     const begrenzt = r.begrenzt_durch_schnitt ? `<p class="leise">${escape(begrenztSatz(r.schnitt, this.passform))}</p>` : "";
 
     return `<div class="${this.reveal ? "reveal" : ""}">
@@ -1027,7 +1058,11 @@ class Widget {
           ${this.htmlKonto()}
         </div>
         <div class="fuss">
-          <button type="button" class="primaer" data-aktion="uebernehmen">Größe ${escape(zeigt.groesse)} übernehmen</button>
+          ${
+            ziel
+              ? `<button type="button" class="primaer" data-aktion="uebernehmen">Größe ${escape(ziel.groesse)} übernehmen</button>`
+              : `<button type="button" class="primaer" data-aktion="schliessen">Zur Größentabelle des Shops</button>`
+          }
           <div class="fuss-links">
             <button type="button" class="link" data-aktion="angaben" aria-expanded="${this.angabenOffen}">Angaben ändern</button>
             ${this.token ? "" : `<button type="button" class="link" data-aktion="speichern">Maße speichern</button>`}
@@ -1101,9 +1136,40 @@ class Widget {
       </div>`;
   }
 
-  /** „Größe … übernehmen“: folgt im zweiten Teil von 8b (Größe im Shop auswählen). */
-  private uebernehmen() {
+  private ausverkauft(g: GroessenAnsicht | null): boolean {
+    if (!g?.variante) return false;
+    const liste = this.einstellungen?.einstieg?.dataset.ausverkauft ?? "";
+    return liste.split(",").includes(g.variante);
+  }
+
+  /** Welche Größe „übernehmen“ auswählt: die gezeigte, sonst die andere, wenn die gezeigte ausverkauft ist. */
+  private uebernahmeZiel(): GroessenAnsicht | null {
+    const r = this.ergebnis;
+    if (!r?.haupt) return null;
+    const zeigt = this.ansicht === "vergleich" && r.vergleich ? r.vergleich : r.haupt;
+    const andere = zeigt === r.haupt ? r.vergleich : r.haupt;
+    if (!this.ausverkauft(zeigt)) return zeigt;
+    return andere && !this.ausverkauft(andere) ? andere : null;
+  }
+
+  /** „Größe … übernehmen“ (Figma E39): Größe im Shop auswählen, Fenster schließen, Rückmeldung unter dem Button. */
+  private async uebernehmen() {
+    const r = this.ergebnis;
+    const ziel = this.uebernahmeZiel();
+    if (!r || !ziel) return this.schliessen();
+    const einstieg = this.einstellungen?.einstieg;
+    const empfohlen = r.status === "empfohlen" && ziel.groesse === r.recommended_size;
+    const passform = passformWort(this.passform);
     this.schliessen();
+
+    const status = einstieg?.querySelector<HTMLElement>("[data-ox-status]");
+    const ergebnis = await waehleGroesse(ziel.groesse, ziel.variante, einstieg);
+    if (!status || ergebnis === "neu_laden") return;
+    status.textContent =
+      ergebnis === "ausgewaehlt"
+        ? `✓ Größe ${ziel.groesse} ausgewählt${empfohlen ? ` · passt ${passform}` : ""}. Sie können direkt bestellen.`
+        : `Ommetryx empfiehlt Größe ${ziel.groesse}. Bitte wählen Sie diese Größe in der Größenauswahl aus.`;
+    status.hidden = false;
   }
 
   /** Link zu „Mein Ommetryx“ (Maße ändern, Einwilligungen widerrufen, Daten herunterladen, löschen). */

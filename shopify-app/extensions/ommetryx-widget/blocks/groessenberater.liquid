@@ -2,15 +2,19 @@
   Ommetryx Größenberater – Einstiegs-Button auf der Produktseite.
   Erscheint nur, wenn das Produkt von Ommetryx vermessen ist (Metafeld $app.vermessen).
   Der Lader (ommetryx-lader.js) holt das eigentliche Widget erst beim Klick.
+  data-ausverkauft: Varianten-Nummern, die gerade nicht verfügbar sind (für „Größe ausverkauft“, Figma E15).
+  data-ox-status: Rückmeldung nach „Größe übernehmen“ (Figma E39).
 {%- endcomment -%}
 {%- assign ox_produkt = block.settings.product | default: product -%}
 {%- assign ox_vermessen = ox_produkt.metafields['$app'].vermessen.value -%}
 
 {%- if ox_produkt and ox_vermessen == true -%}
+  {%- assign ox_ausverkauft = ox_produkt.variants | where: 'available', false | map: 'id' | join: ',' -%}
   <div
     class="ox-einstieg"
     data-ox-einstieg
     data-produkt="{{ ox_produkt.id }}"
+    data-ausverkauft="{{ ox_ausverkauft }}"
     data-proxy="/apps/ommetryx"
     data-widget="{{ 'ommetryx-widget.js' | asset_url }}"
     style="margin: 0 0 12px;"
@@ -23,6 +27,12 @@
     >
       {{ block.settings.text | escape }}
     </button>
+    <p
+      data-ox-status
+      role="status"
+      hidden
+      style="margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; background: #E8F2F4; color: #0C3A4A; font-size: 14px; line-height: 1.4;"
+    ></p>
   </div>
 {%- elsif request.design_mode -%}
   <p style="margin: 0 0 12px; padding: 8px 12px; border: 1px dashed #7d868a; font-size: 14px;">

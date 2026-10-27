@@ -98,6 +98,16 @@ legend { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding: 0; }
 .karte-ergebnis p:last-child { margin-bottom: 0; }
 .kreis { flex: none; width: 64px; height: 64px; border-radius: 999px; background: var(--apricot); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; line-height: 1; font-weight: 600; }
 
+/* Größe ausverkauft (E15): kein Apricot, die Empfehlung ist nicht kaufbar */
+.karte.ausverkauft { display: flex; align-items: center; gap: 16px; }
+.karte.ausverkauft h2 { margin: 0 0 4px; font-size: 16px; }
+.karte.ausverkauft p { margin: 0; }
+.groesse-rahmen, .groesse-ink { flex: none; width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 600; }
+.groesse-rahmen { border: 1px solid var(--linie-stark); color: var(--graphit); background: #fff; }
+.groesse-ink { background: var(--ink); color: #fff; }
+.ueberschrift-klein { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sekundaer); margin: 0 0 8px; }
+.ersatz p { margin: 0; }
+
 /* Zwischen zwei Größen (E38) */
 .karte-zwei { border: 2px solid var(--petrol-tief); border-radius: 16px; padding: 16px; margin-bottom: 16px; background: #fff; }
 .zwei-kopf { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }

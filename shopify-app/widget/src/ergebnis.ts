@@ -131,3 +131,12 @@ export function groessenKurz(g: GroessenAnsicht, primaer: Zone): string {
 export function begrenztSatz(schnitt: Passform, passform: Passform): string {
   return `Dieses Teil ist ${PASSFORM[schnitt].wort} geschnitten. ${gross(PASSFORM[passform].wort)} sitzt es deshalb nur begrenzt – wir haben die Empfehlung an den Schnitt angepasst.`;
 }
+
+/** Ersatz, wenn die empfohlene Größe ausverkauft ist (E15), z. B. „Etwas enger: an der Brust 4 cm Spielraum statt 8 cm.“ */
+export function ersatzSatz(empfohlen: GroessenAnsicht, ersatz: GroessenAnsicht, primaer: Zone): string {
+  const h = wichtigste(empfohlen, primaer);
+  const e = ersatz.zonen.find((z) => z.zone === h?.zone);
+  if (!h || !e) return "Die nächstbeste Größe für Ihre Maße.";
+  const richtung = e.spielraum < h.spielraum ? "Etwas enger" : e.spielraum > h.spielraum ? "Etwas weiter" : "Ähnlich";
+  return `${richtung}: ${ZONEN[h.zone].an} ${cm(e.spielraum)} Spielraum statt ${cm(h.spielraum)}.`;
+}

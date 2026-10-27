@@ -321,5 +321,16 @@ Bis zur Klärung nicht raten.
 - Logo-Ebenen aus Figma (`assets/ox-logo-*.svg`). Sora: Theme-Erweiterungen erlauben keine .woff2 → `widget/schrift/sora-latin.woff2` wird beim Bauen als Base64 in `assets/ommetryx-schrift.css` eingebettet.
 - Feste Fußleiste (`.fuss`, sticky) mit „Weiter“ wie Figma E03–E06. Ein mit „Stimmt so“ bestätigter Ausreißer fließt nicht in die Erwartung der anderen Maße ein (sonst Nachfrage auf Nachfrage). Altersgruppen werden mit Halbgeviertstrich angezeigt („16–29“), gespeichert bleibt „16-29“.
 - 27.10. getestet (Handy-Ansicht 375×812): 1,68 → „1,68 m? Meinten Sie 168 cm?“, 920 → 92, Hüfte 78 → Nachfrage → „Stimmt so“, Taille 76 ohne Folge-Nachfrage, Ladebildschirm 3 Stufen, Ergebnis 38 „Sicherheit hoch“.
-- **Nächster Schritt:** 8b (Warum M?, Zonen-Ansicht, So säße L, Hilfe zwischen zwei Größen, „unsicher“-Ansicht, Größe übernehmen).
+- 8a von Leonie freigegeben (27.10.).
 - **Falle:** Während `shopify app dev` läuft, führen Widget-Änderungen oft zu „Internal error … on our end“ und Absturz → App nach Widget-Builds neu starten (vorher übrige `react-router dev`-Prozesse beenden).
+- **Falle:** Nach jedem Neustart von `shopify app dev` gibt es eine neue Tunnel-Adresse. Die ersten App-Proxy-Anfragen enden dann oft mit Zeitüberschreitung oder 500 (Shopify-Fehlerseite). Etwa 30–60 s warten, dann klappt es.
+- **Falle:** In der lokalen Vorschau (127.0.0.1:9293) scheitert der Größenwechsel des Themes selbst (Section-Rendering → 401, Knopf zeigt „Unavailable“). Das ist eine Grenze der Vorschau, kein Fehler von uns. Größenauswahl im echten Shop testen.
+
+**Etappe 8b (27.10., im Browser getestet, wartet auf Leonies OK)**
+- Entscheidungen (Leonie, 27.10.): (a) Server schickt dem Widget nur Empfehlung + Vergleichsgröße, Spielräume auf 0,5 cm gerundet, keine Strafen/Gewichte/Ziel-Werte (`app/widget/ansicht.ts`) – Schutz der Kleidungsmaße; (b) Skalen-Punkte Petrol tief, „enger“ Terracotta, Apricot nur im Größen-Kreis (weicht bewusst von Figma ab); (c) „Länge“ und „Schultern“ vorerst nicht auf den Skalen (Länge wird nicht gerechnet, Schulter nur mit Referenzteil).
+- Ergebnis-Fenster: `widget/src/ergebnis.ts` (Texte: Warum, Kurzsatz, So säße, Entscheidungshilfe, Ersatz, Schnitt-Hinweis; Skala), `widget/src/silhouette.ts`, Ansichten in `widget.ts` (E09 Karte mit Kreis, E09b Zonen mit Umschalter, E10 So säße, E38 zwischen zwei Größen, „unsicher“ mit aufgeklappten Zonen, E37 Angaben ändern → einzelnes Maß ändern → direkt neu rechnen, E15 ausverkauft → nächstbeste verfügbare Größe).
+- „Größe übernehmen“ (E39): `widget/src/auswahl.ts` klickt Radio/Select mit dem Größen-Namen im Produktbereich, prüft `input[name=id]` bis 1,5 s, sonst Neuladen mit `?variant=<ID>` (Shopify-Standard für Online-Store-2.0-Themes, laut Doku). Statuszeile `[data-ox-status]` im App-Block. Ausverkaufte Varianten liefert der Block per Liquid (`data-ausverkauft`), keine neuen Zugriffsrechte.
+- Widget jetzt 63 KB (gzip 18 KB), lädt erst beim Klick; Lader unverändert 1,5 KB.
+- Nicht visuell mit echten Daten getestet: „zwischen zwei Größen“ und „unsicher“ (kommen bei der Test-Bluse nicht vor, Darstellung mit veränderter Antwort im Test-Browser geprüft). Direkter Größenwechsel per Klick nur im echten Shop prüfbar (siehe Falle oben); Rückfallweg `?variant=` funktioniert.
+- Offen/später: „Benachrichtigen, wenn wieder da“ (E15, nur wenn Händler es aktiviert), Statuszeile nach Neuladen fehlt (bewusst, kein Speicher).
+- **Nächster Schritt:** Leonie probiert 8b aus (auch im echten Shop), dann Etappe 9 planen (Händler-UI).
