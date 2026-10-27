@@ -3,14 +3,14 @@
 //   Etappe 1: das O-Band rollt an · Etappe 2: das Band läuft durch das X · Etappe 3: die Apricot-Spitze.
 // Positionen, Masken und Maße 1:1 aus Figma (Grundgröße 171 × 119 px). Dateien liegen in assets/.
 
-interface Ebene {
+export interface Ebene {
   datei: string;
   /** CSS inset (oben rechts unten links) relativ zur Bildmarke */
   inset: string;
   maske?: { datei: string; position: string; groesse: string; innen: string };
 }
 
-const STUFEN: Ebene[][] = [
+export const STUFEN: Ebene[][] = [
   [{ datei: "ox-logo-5ebd1.svg", inset: "5.88% 53.98% 6.47% 4.97%" }],
   [
     {

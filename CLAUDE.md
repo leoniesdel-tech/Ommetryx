@@ -351,3 +351,10 @@ Bis zur Klärung nicht raten.
 - Startseite: Schritt 4 verlinkt auf Produkte, Abdeckung zeigt Vorgemerkte. Intern: Spalte „Vom Händler vorgemerkt“ und Hinweis je Produkt.
 - GraphQL-Abfragen mit dem Validator des Plugins `shopify-admin` (scripts/validate.mjs, --version 2026-07) geprüft – der funktioniert hier.
 - Shopify-Beispielprodukte (Snowboards, Gift Card) im Test-Shop sind normal und nicht von uns.
+
+**Etappe 9c-1 Einstellungen + Button-Design (27.10., im Admin angesehen, nichts gespeichert)**
+- `Shop.einstellungen` (JSON, Migration `haendler_einstellungen`), Regeln in `app/haendler/einstellungen.ts` (Zod, Standardwerte, feldweise auffüllen), Kontrast nach WCAG in `app/haendler/kontrast.ts` (gegen Weiß und Linen, schlechterer Wert zählt). Nicht lesbare Buttons lassen sich nicht speichern (Client und Server).
+- Seite `app/routes/app.einstellungen.tsx`: Button-Text, Ansprache Sie/du (Einstellung gespeichert, Du-Texte folgen in 9c-2), Datenschutz-Link (nur https), Gestaltung theme/ommetryx/eigen mit Darstellung, Farbe, Ecken, Symbol; Vorschau (`app/haendler/ButtonVorschau.tsx`, Logo-Dateien in `public/marke/`) und Lesbarkeits-Check. Speichern-Leiste über `SaveBar` aus app-bridge-react, gesteuert über „Werte ≠ gespeicherter Stand“ (`data-save-bar` blieb nach Verwerfen stehen).
+- Speichern schreibt DB + App-Metafeld `ommetryx.button` (JSON, nur Button-Werte). Block rendert daraus den Button (Klassen `ox-knopf--gefuellt/umrandet/link`, Fokusrahmen immer sichtbar); Text-Einstellung im Theme-Editor entfernt. Farbige Bildmarke als Snippet `snippets/ox-bildmarke.liquid`, erzeugt mit `npx tsx scripts/bildmarke-snippet.ts` aus `widget/src/logo.ts`; einfarbige Bildmarke `assets/ox-zeichen.svg` (Figma 56:483) als Maske in currentColor.
+- Shopify-Admin ist auf Englisch → Save-Bar-Knöpfe heißen „Save/Discard“ (beschriftet Shopify selbst).
+- **Nächster Schritt:** 9c-2 Du-Texte im Widget (Leonie liest gegen), dann 9d.

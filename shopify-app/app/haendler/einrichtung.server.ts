@@ -5,24 +5,10 @@
 // den AVV zusätzlich bei jeder Widget-Anfrage (widget/aktiv.server.ts).
 
 import db from "../db.server";
+import { frage, setzeAppMetafeld } from "./admin.server";
+import type { AdminGraphql } from "./admin.server";
 import type { Einrichtung } from "./einrichtung";
 import { AVV } from "./texte";
-
-interface AdminGraphql {
-  graphql: (abfrage: string, optionen?: { variables?: Record<string, unknown> }) => Promise<Response>;
-}
-
-interface GraphqlAntwort<T> {
-  data?: T;
-  errors?: { message: string }[];
-}
-
-async function frage<T>(admin: AdminGraphql, abfrage: string, variables?: Record<string, unknown>): Promise<T> {
-  const antwort = await admin.graphql(abfrage, variables ? { variables } : undefined);
-  const json = (await antwort.json()) as GraphqlAntwort<T>;
-  if (!json.data) throw new Error("Shopify-Abfrage fehlgeschlagen");
-  return json.data;
-}
 
 export async function ladeEinrichtung(admin: AdminGraphql, shop: string): Promise<Einrichtung> {
   // Wer die App im Admin öffnet, hat sie installiert.
@@ -54,19 +40,7 @@ export async function ladeEinrichtung(admin: AdminGraphql, shop: string): Promis
 
 /** Setzt das App-Metafeld, das den Button im Shop freischaltet (oder sperrt). */
 export async function setzeFreischaltung(admin: AdminGraphql, aktiv: boolean) {
-  const { currentAppInstallation } = await frage<{ currentAppInstallation: { id: string } }>(admin, `#graphql
-    query AppInstallation { currentAppInstallation { id } }`);
-  const daten = await frage<{ metafieldsSet: { userErrors: { message: string }[] } }>(
-    admin,
-    `#graphql
-      mutation Freischaltung($metafields: [MetafieldsSetInput!]!) {
-        metafieldsSet(metafields: $metafields) { userErrors { message } }
-      }`,
-    {
-      metafields: [{ ownerId: currentAppInstallation.id, namespace: "ommetryx", key: "aktiv", type: "boolean", value: aktiv ? "true" : "false" }],
-    },
-  );
-  if (daten.metafieldsSet.userErrors.length > 0) throw new Error("Freischaltung fehlgeschlagen");
+  await setzeAppMetafeld(admin, "aktiv", "boolean", aktiv ? "true" : "false");
 }
 
 export async function bestaetigeAvv(admin: AdminGraphql, shop: string) {

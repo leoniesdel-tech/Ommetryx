@@ -21,14 +21,57 @@
     data-widget="{{ 'ommetryx-widget.js' | asset_url }}"
     style="margin: 0 0 12px;"
   >
-    <button
-      type="button"
-      class="button button--secondary"
-      aria-haspopup="dialog"
-      style="min-height: 44px; width: 100%;"
-    >
-      {{ block.settings.text | escape }}
-    </button>
+    {%- comment -%}
+      Button-Gestaltung aus den App-Einstellungen (Figma H10, App-Metafeld ommetryx.button).
+      Gleiche Regeln wie die Vorschau im Admin (app/haendler/ButtonVorschau.tsx) – bei Änderungen beide anpassen.
+      Leitplanken: Höhe ≥ 44 px, Fokusrahmen immer sichtbar, Farben beim Speichern geprüft.
+    {%- endcomment -%}
+    {%- assign ox_b = app.metafields.ommetryx.button.value -%}
+    {%- assign ox_text = ox_b.text | default: 'Meine Größe finden' -%}
+    {%- assign ox_modus = ox_b.modus | default: 'theme' -%}
+    {%- if ox_modus == 'theme' -%}
+      <button type="button" class="button button--secondary" aria-haspopup="dialog" style="min-height: 44px; width: 100%;">
+        {{ ox_text | escape }}
+      </button>
+    {%- else -%}
+      {%- if ox_modus == 'ommetryx' -%}
+        {%- assign ox_art = 'umrandet' -%}
+        {%- assign ox_farbe = '#0C3A4A' -%}
+        {%- assign ox_schrift = '#0C3A4A' -%}
+        {%- assign ox_radius = 12 -%}
+        {%- assign ox_symbol = 'logo' -%}
+      {%- else -%}
+        {%- assign ox_art = ox_b.darstellung | default: 'umrandet' -%}
+        {%- assign ox_farbe = ox_b.farbe | default: '#0C3A4A' -%}
+        {%- assign ox_schrift = ox_b.schrift | default: ox_farbe -%}
+        {%- assign ox_radius = ox_b.radius | default: 12 -%}
+        {%- assign ox_symbol = ox_b.symbol | default: 'keins' -%}
+      {%- endif -%}
+      <button
+        type="button"
+        class="ox-knopf ox-knopf--{{ ox_art | escape }}"
+        aria-haspopup="dialog"
+        style="--ox-farbe: {{ ox_farbe | escape }}; --ox-schrift: {{ ox_schrift | escape }}; --ox-radius: {{ ox_radius | escape }}px;"
+      >
+        {%- case ox_symbol -%}
+          {%- when 'logo' -%}
+            {% render 'ox-bildmarke' %}
+          {%- when 'logo_einfarbig' -%}
+            <span class="ox-zeichen" aria-hidden="true" style="-webkit-mask-image: url('{{ 'ox-zeichen.svg' | asset_url }}'); mask-image: url('{{ 'ox-zeichen.svg' | asset_url }}');"></span>
+          {%- when 'massband' -%}
+            <svg aria-hidden="true" width="20" height="12" viewBox="0 0 20 12" fill="none" style="flex: none;"><rect x="0.75" y="0.75" width="18.5" height="10.5" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M9 1v3M13 1v4M17 1v3" stroke="currentColor" stroke-width="1.5"/></svg>
+        {%- endcase -%}
+        <span>{{ ox_text | escape }}</span>
+      </button>
+      <style>
+        .ox-knopf { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; padding: 0 16px; font: inherit; font-weight: 600; line-height: 1.2; cursor: pointer; border-radius: var(--ox-radius); }
+        .ox-knopf--gefuellt { background: var(--ox-farbe); color: var(--ox-schrift); border: 1px solid var(--ox-farbe); }
+        .ox-knopf--umrandet { background: transparent; color: var(--ox-schrift); border: 2px solid var(--ox-farbe); }
+        .ox-knopf--link { background: transparent; color: var(--ox-schrift); border: 0; text-decoration: underline; justify-content: flex-start; padding: 0; min-height: 44px; }
+        .ox-knopf:focus-visible { outline: 2px solid currentColor !important; outline-offset: 2px !important; }
+        .ox-zeichen { display: inline-block; width: 23px; height: 16px; flex: none; background: currentColor; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+      </style>
+    {%- endif -%}
     <p
       data-ox-status
       role="status"
@@ -53,7 +96,7 @@
   "javascript": "ommetryx-lader.js",
   "settings": [
     { "type": "product", "id": "product", "label": "Produkt", "autofill": true },
-    { "type": "text", "id": "text", "label": "Text auf dem Button", "default": "Meine Größe finden" }
+    { "type": "paragraph", "content": "Text und Aussehen des Buttons stellen Sie in der Ommetryx-App unter „Einstellungen“ ein." }
   ]
 }
 {% endschema %}

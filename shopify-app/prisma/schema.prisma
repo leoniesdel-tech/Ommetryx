@@ -183,6 +183,8 @@ model Shop {
   /// Einrichtung auf der Startseite (Figma H01)
   positionGeprueftAm      DateTime? @map("position_geprueft_am")
   einrichtungAusgeblendet Boolean   @default(false) @map("einrichtung_ausgeblendet")
+  /// Einstellungen des Händlers (Figma H05/H10), geprüft mit app/haendler/einstellungen.ts
+  einstellungen           Json?
 
   artikel         Artikel[]
   produktWuensche ProduktWunsch[]
