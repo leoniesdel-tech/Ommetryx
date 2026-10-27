@@ -68,6 +68,10 @@ export default function Produkte() {
                 <td>
                   {p.erfassung ? (
                     <span className={`status ${p.erfassung === "vermessen" ? "status-vermessen" : ""}`}>{STATUS[p.erfassung] ?? p.erfassung}</span>
+                  ) : p.wunsch === "vorgemerkt" ? (
+                    <span className="status">vom Händler vorgemerkt</span>
+                  ) : p.wunsch === "keine_beratung" ? (
+                    "Händler: keine Beratung nötig"
                   ) : (
                     "noch nicht erfasst"
                   )}

@@ -173,20 +173,38 @@ model KonfigParameter {
 // ---------------------------------------------------------------------------
 
 model Shop {
-  id              Int       @id @default(autoincrement())
-  domain          String    @unique
-  installiertAm   DateTime  @default(now()) @map("installiert_am")
-  deinstalliertAm DateTime? @map("deinstalliert_am")
+  id                      Int       @id @default(autoincrement())
+  domain                  String    @unique
+  installiertAm           DateTime  @default(now()) @map("installiert_am")
+  deinstalliertAm         DateTime? @map("deinstalliert_am")
   /// Auftragsverarbeitungsvertrag: ohne Bestätigung verarbeitet das Widget keine Körpermaße (Figma H09).
-  avvVersion      String?   @map("avv_version")
-  avvBestaetigtAm DateTime? @map("avv_bestaetigt_am")
+  avvVersion              String?   @map("avv_version")
+  avvBestaetigtAm         DateTime? @map("avv_bestaetigt_am")
   /// Einrichtung auf der Startseite (Figma H01)
   positionGeprueftAm      DateTime? @map("position_geprueft_am")
   einrichtungAusgeblendet Boolean   @default(false) @map("einrichtung_ausgeblendet")
 
-  artikel Artikel[]
+  artikel         Artikel[]
+  produktWuensche ProduktWunsch[]
 
   @@map("shop")
+  @@schema("app")
+}
+
+/// Wunsch des Händlers je Produkt (Figma H03): zur Vermessung vormerken oder keine Beratung nötig.
+/// Sobald das Team ein Produkt erfasst (Artikel), zählt dessen Status („in Vermessung“, „live“).
+model ProduktWunsch {
+  id               Int      @id @default(autoincrement())
+  shopId           Int      @map("shop_id")
+  shopifyProduktId String   @map("shopify_produkt_id")
+  /// "vorgemerkt" oder "keine_beratung"
+  wunsch           String
+  geaendertAm      DateTime @updatedAt @map("geaendert_am")
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, shopifyProduktId])
+  @@map("produkt_wunsch")
   @@schema("app")
 }
 

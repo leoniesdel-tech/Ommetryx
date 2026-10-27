@@ -344,3 +344,10 @@ Bis zur Klärung nicht raten.
 - Shopify-Prüfskripte der Plugins (validate.mjs) laufen hier nicht (fehlende Pakete); Typprüfung über `npx tsc` mit Polaris-Typen.
 - **Falle (wieder passiert):** Funktionen, die eine Seiten-Komponente braucht, nie aus `*.server.ts` importieren – sonst startet der Browser-Teil nicht (Knopf hängt im Ladezustand). Reine Logik in eigene Datei (z. B. `app/haendler/einrichtung.ts`).
 - Leonie ist im eingebauten Browser bei Shopify angemeldet (27.10.). Im Admin nichts anklicken, was etwas bestätigt oder aktiviert, ohne ihr OK.
+
+**Etappe 9b Produkte (27.10., im Admin angesehen, nichts gespeichert)**
+- Tabelle `ProduktWunsch` (Migration `produkt_wunsch`): Wunsch des Händlers je Produkt („vorgemerkt“/„keine_beratung“). Status-Logik `app/haendler/produkte.ts`: Erfassung des Teams hat Vorrang (entwurf → „In Vermessung“, vermessen → „Live“), dann Wunsch, sonst „Nicht vermessen“. Händler können erfasste Produkte nicht ändern.
+- Seite `app/routes/app.produkte.tsx` (Muster „Index table“): Suche, Status-Chips (filtern die geladene Seite, bis 50 Produkte), Seitenwechsel per Cursor, Auswahl mit Sammel-Aktionen (vormerken, keine Beratung, zurücksetzen), Toast als Rückmeldung. Größen-Spanne aus der Größen-Option (Größe/Size/…), sonst „One Size“.
+- Startseite: Schritt 4 verlinkt auf Produkte, Abdeckung zeigt Vorgemerkte. Intern: Spalte „Vom Händler vorgemerkt“ und Hinweis je Produkt.
+- GraphQL-Abfragen mit dem Validator des Plugins `shopify-admin` (scripts/validate.mjs, --version 2026-07) geprüft – der funktioniert hier.
+- Shopify-Beispielprodukte (Snowboards, Gift Card) im Test-Shop sind normal und nicht von uns.

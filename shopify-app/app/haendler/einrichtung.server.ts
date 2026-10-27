@@ -27,7 +27,10 @@ async function frage<T>(admin: AdminGraphql, abfrage: string, variables?: Record
 export async function ladeEinrichtung(admin: AdminGraphql, shop: string): Promise<Einrichtung> {
   // Wer die App im Admin öffnet, hat sie installiert.
   const zeile = await db.shop.upsert({ where: { domain: shop }, create: { domain: shop }, update: { deinstalliertAm: null } });
-  const vermessen = await db.artikel.count({ where: { shopId: zeile.id, status: "vermessen" } });
+  const [vermessen, vorgemerkt] = await Promise.all([
+    db.artikel.count({ where: { shopId: zeile.id, status: "vermessen" } }),
+    db.produktWunsch.count({ where: { shopId: zeile.id, wunsch: "vorgemerkt" } }),
+  ]);
   let gesamt: number | null = null;
   try {
     const daten = await frage<{ productsCount: { count: number } }>(admin, `#graphql
@@ -45,8 +48,7 @@ export async function ladeEinrichtung(admin: AdminGraphql, shop: string): Promis
     ausgeblendet: zeile.einrichtungAusgeblendet,
     produkteGesamt: gesamt,
     produkteVermessen: vermessen,
-    // Vormerken kommt in Etappe 9b (Produkte).
-    produkteVorgemerkt: 0,
+    produkteVorgemerkt: vorgemerkt,
   };
 }
 

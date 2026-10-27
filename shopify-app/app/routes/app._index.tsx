@@ -158,9 +158,14 @@ export default function Startseite() {
         );
       case "artikel":
         return (
-          <s-paragraph>
-            Wählen Sie die Produkte aus, die wir vermessen sollen. Die Seite „Produkte“ dafür folgt in Kürze. Bis dahin schreiben Sie uns einfach.
-          </s-paragraph>
+          <s-stack gap="base">
+            <s-paragraph>Wählen Sie die Produkte aus, die wir vermessen sollen. Produkte ohne Größen (z. B. Taschen) können Sie ausnehmen.</s-paragraph>
+            <s-stack direction="inline" gap="base">
+              <s-button variant="primary" href="/app/produkte">
+                Produkte auswählen
+              </s-button>
+            </s-stack>
+          </s-stack>
         );
       case "muster":
         return (
@@ -242,7 +247,9 @@ export default function Startseite() {
           {e.produkteGesamt === null
             ? `${e.produkteVermessen} Produkte vermessen`
             : `${e.produkteVermessen} von ${e.produkteGesamt} Produkten vermessen`}
+          {e.produkteVorgemerkt > 0 ? `, ${e.produkteVorgemerkt} zur Vermessung vorgemerkt` : ""}
         </s-paragraph>
+        <s-link href="/app/produkte">Zu den Produkten</s-link>
         <s-paragraph color="subdued">
           Ohne Maße zeigt das Widget bei einem Produkt nichts an. Ihre Kundinnen und Kunden sehen dann Ihre Größentabelle.
         </s-paragraph>

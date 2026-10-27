@@ -45,7 +45,12 @@ export async function shopsMitArtikeln() {
     orderBy: { domain: "asc" },
     select: {
       domain: true,
-      _count: { select: { artikel: { where: { status: "vermessen" } } } },
+      _count: {
+        select: {
+          artikel: { where: { status: "vermessen" } },
+          produktWuensche: { where: { wunsch: "vorgemerkt" } },
+        },
+      },
     },
   });
 }
@@ -78,8 +83,13 @@ export async function produkteDesShops(shop: string, suche: string | null) {
     where: { shop: { domain: shop }, shopifyProduktId: { in: produkte.map((p) => p.id) } },
     select: { shopifyProduktId: true, status: true },
   });
+  const wuensche = await db.produktWunsch.findMany({
+    where: { shop: { domain: shop }, shopifyProduktId: { in: produkte.map((p) => p.id) } },
+    select: { shopifyProduktId: true, wunsch: true },
+  });
   const status = new Map(erfasst.map((a) => [a.shopifyProduktId, a.status]));
-  return produkte.map((p) => ({ ...p, erfassung: status.get(p.id) ?? null }));
+  const wunsch = new Map(wuensche.map((w) => [w.shopifyProduktId, w.wunsch]));
+  return produkte.map((p) => ({ ...p, erfassung: status.get(p.id) ?? null, wunsch: wunsch.get(p.id) ?? null }));
 }
 
 export async function produktMitGroessen(shop: string, produktGid: string) {

@@ -26,6 +26,7 @@ export default function Uebersicht() {
               <tr>
                 <th scope="col">Shop</th>
                 <th scope="col">Vermessene Artikel</th>
+                <th scope="col">Vom Händler vorgemerkt</th>
               </tr>
             </thead>
             <tbody>
@@ -35,6 +36,7 @@ export default function Uebersicht() {
                     <Link to={`/intern/shops/${s.domain}`}>{s.domain}</Link>
                   </td>
                   <td>{s._count.artikel}</td>
+                  <td>{s._count.produktWuensche}</td>
                 </tr>
               ))}
             </tbody>
