@@ -5,8 +5,9 @@
 
 import { z } from "zod";
 import { empfehle, EmpfehlungsFehler, PASSFORMEN } from "@ommetryx/empfehlung";
-import type { Ergebnis } from "@ommetryx/empfehlung";
+import type { Ergebnis, Passform } from "@ommetryx/empfehlung";
 import { alsEmpfehlungsArtikel } from "../intern/erfassung";
+import { variantenNummer, widgetErgebnis } from "./ansicht";
 import { kundinAusToken } from "../kundin/login.server";
 import { ladeProfil } from "../kundin/profil.server";
 import { ladeArtikel } from "../models/artikel.server";
@@ -62,7 +63,7 @@ export async function artikelInfo(shop: string, produkt: string | null) {
   });
 }
 
-/** Rechnet die Empfehlung. Ergebnis ohne Körpermaße zurück (nur Mehrweiten je Zone für die Ansicht). */
+/** Rechnet die Empfehlung. Antwort ohne Körpermaße, gekürzt auf die Anzeige (siehe ansicht.ts). */
 export async function empfehlung(shop: string, roh: unknown) {
   const anfrage = empfehlungsAnfrage.safeParse(roh);
   if (!anfrage.success) return antwort({ fehler: "ungueltige_eingabe" }, 400);
@@ -79,12 +80,20 @@ export async function empfehlung(shop: string, roh: unknown) {
   const artikel = await ladeArtikel(shop, produktGid(produkt));
   if (!artikel || artikel.status !== "vermessen") return antwort({ fehler: "nicht_vermessen" }, 404);
 
+  const k = await aktiveKonfiguration();
   let ergebnis: Ergebnis;
   try {
-    ergebnis = empfehle({ koerper, passform, artikel: alsEmpfehlungsArtikel(artikel) }, await aktiveKonfiguration());
+    ergebnis = empfehle({ koerper, passform, artikel: alsEmpfehlungsArtikel(artikel) }, k);
   } catch (fehler) {
     if (fehler instanceof EmpfehlungsFehler) return antwort({ fehler: fehler.code }, 422);
     throw fehler;
   }
-  return antwort(ergebnis);
+  return antwort(
+    widgetErgebnis(ergebnis, {
+      passform,
+      schnitt: artikel.schnitt as Passform,
+      primaer: k.artikelart(artikel.artikelart).primaermass,
+      groessen: artikel.groessen.map((g) => ({ groesse: g.groesse, variante: variantenNummer(g.shopifyVarianteId) })),
+    }),
+  );
 }

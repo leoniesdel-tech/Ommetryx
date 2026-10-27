@@ -2,7 +2,8 @@
 // Ablauf: Einwilligung (Entwurf) → Mess-Schritte (je ein Maß, Tipp, Plausibilität) → Passform
 //         → Ladebildschirm → Ergebnis → optional „Maße speichern“ (E-Mail + Code).
 // Angemeldet: „Willkommen zurück“ → Passform → kurzer Ladebildschirm → Ergebnis.
-// Vorlagen: Figma „Design v1 · Endkunde“ E03–E06, E17, E34, E36/E36b und die Bewegungs-Spezifikation.
+// Vorlagen: Figma „Design v1 · Endkunde“ E03–E06, E09/E09b/E10, E17, E34, E36/E36b, E37, E38
+// und die Bewegungs-Spezifikation.
 //
 // Datenschutz: Maße bleiben im Arbeitsspeicher dieses Fensters und gehen per POST an den App Proxy.
 // Im Browser wird nur nach aktiver Anmeldung der Login-Token gespeichert (localStorage dieses Shops),
@@ -10,10 +11,26 @@
 
 import { ALTERSGRUPPEN, EINWILLIGUNGEN } from "../../app/kundin/texte";
 import { STIL } from "./stil";
-import { FELDER, alsZahl, pruefeEingaben, sicherheitInWorten } from "./eingaben";
+import { FELDER, alsZahl, pruefeEingaben } from "./eingaben";
+import {
+  begrenztSatz,
+  bewertungText,
+  entscheidungshilfe,
+  groessenKurz,
+  kurzSatz,
+  passformWort,
+  sicherheitText,
+  skalaProzent,
+  spielraumText,
+  vergleichSatz,
+  warumSatz,
+  zonenName,
+} from "./ergebnis";
+import type { GroessenAnsicht, WidgetErgebnis, Zone } from "./ergebnis";
 import type { Feld, Koerper, Rohwerte } from "./eingaben";
 import { logoHtml } from "./logo";
 import { pruefePlausibel } from "./plausi";
+import { silhouette } from "./silhouette";
 import type { Hinweis, PlausiKonfig } from "./plausi";
 import { MESS_HINWEIS, SCHRITTE } from "./texte";
 
@@ -31,13 +48,7 @@ interface Einstellungen {
   ausloeser?: HTMLElement;
 }
 
-interface Ergebnis {
-  recommended_size: string | null;
-  confidence: number;
-  alternative_size: string | null;
-  status: "empfohlen" | "unsicher" | "keine_passende_groesse";
-  begrenzt_durch_schnitt: boolean;
-}
+type Ergebnis = WidgetErgebnis;
 
 interface Profil extends Koerper {
   altersgruppe?: string;
@@ -140,6 +151,15 @@ class Widget {
   private abbruch?: AbortController;
   private zurueckNachAbbruch: Schritt = "passform";
   private reveal = false;
+  // Ergebnis: welche Größe die Ansicht zeigt, aufgeklappte Bereiche, Ändern eines einzelnen Maßes
+  private ansicht: "haupt" | "vergleich" = "haupt";
+  private detailsOffen = false;
+  /** Neues Ergebnis gibt vor, ob die Zonen aufgeklappt sind (sonst bleibt der bisherige Zustand). */
+  private detailsVorgabe: boolean | null = null;
+  private angabenOffen = false;
+  private einzelAenderung = false;
+  /** Maße vor dem Ändern eines einzelnen Werts, für „Zurück“ ohne Änderung. */
+  private sicherung?: Rohwerte;
 
   oeffnen(einstellungen: Einstellungen) {
     if (this.host) return;
@@ -194,6 +214,8 @@ class Widget {
     this.wurzel = undefined;
     // Maße und Eingaben aus dem Speicher löschen.
     this.roh = {};
+    this.sicherung = undefined;
+    this.einzelAenderung = false;
     this.bestaetigt = {};
     this.profil = undefined;
     this.ergebnis = undefined;
@@ -338,7 +360,7 @@ class Widget {
       await warte(ruhig() ? 0 : 350);
       if (signal.aborted) return;
 
-      this.ergebnis = daten;
+      this.setzeErgebnis(daten, true);
       this.reveal = !ruhig();
       this.wechsle("ergebnis");
       this.reveal = false;
@@ -357,13 +379,21 @@ class Widget {
     try {
       const { status, daten } = await this.post<Ergebnis>("empfehlung", { produkt: this.einstellungen!.produkt, passform: this.passform, ...inhalt });
       if (status !== 200) throw new Error("Antwort");
-      this.ergebnis = daten;
+      this.setzeErgebnis(daten, false);
       this.zeichne();
       this.wurzel?.querySelector<HTMLInputElement>(`input[name=passform][value=${this.passform}]`)?.focus();
       this.sage(this.ansageText());
     } catch {
       this.wechsle("fehler");
     }
+  }
+
+  /** Neues Ergebnis: Ansicht zurück auf die Empfehlung; bei „unsicher“ die Zonen gleich aufklappen. */
+  private setzeErgebnis(daten: Ergebnis, neu: boolean) {
+    this.ergebnis = daten;
+    this.ansicht = "haupt";
+    this.angabenOffen = false;
+    if (neu || daten.status === "unsicher") this.detailsVorgabe = daten.status === "unsicher";
   }
 
   /** Aktualisiert Logo-Stufen und Liste, ohne neu zu zeichnen (sonst würden Übergänge neu starten). */
@@ -521,6 +551,12 @@ class Widget {
 
   private naechsterSchritt() {
     this.hinweis = null;
+    // Aus dem Ergebnis ein einzelnes Maß geändert (Figma E37): direkt neu rechnen und zurück.
+    if (this.einzelAenderung) {
+      this.einzelAenderung = false;
+      this.sicherung = undefined;
+      return void this.berechne(true);
+    }
     if (this.messIndex < this.messFelder().length - 1) {
       this.messIndex += 1;
       return this.wechsle("messen");
@@ -531,6 +567,12 @@ class Widget {
   private zurueck() {
     this.hinweis = null;
     this.feldFehler = {};
+    if (this.einzelAenderung && this.ergebnis) {
+      this.einzelAenderung = false;
+      if (this.sicherung) this.roh = this.sicherung;
+      this.sicherung = undefined;
+      return this.wechsle("ergebnis");
+    }
     if (this.schritt === "passform") {
       this.messIndex = this.messFelder().length - 1;
       return this.wechsle("messen");
@@ -582,7 +624,31 @@ class Widget {
       }
       case "masse-aendern":
         this.messIndex = 0;
+        this.einzelAenderung = false;
         return this.wechsle("messen");
+      case "angaben":
+        this.angabenOffen = !this.angabenOffen;
+        this.zeichne();
+        return this.wurzel?.querySelector<HTMLElement>(this.angabenOffen ? "#ox-angaben" : "[data-aktion='angaben']")?.focus();
+      case "feld-aendern": {
+        const index = this.messFelder().indexOf(ziel.dataset.feld as Feld);
+        if (index < 0) return;
+        this.sicherung = { ...this.roh };
+        this.messIndex = index;
+        this.einzelAenderung = true;
+        this.angabenOffen = false;
+        return this.wechsle("messen");
+      }
+      case "ansicht": {
+        const wert = ziel.dataset.wert === "vergleich" ? "vergleich" : "haupt";
+        if (wert === this.ansicht) return;
+        this.ansicht = wert;
+        this.zeichne();
+        this.wurzel?.querySelector<HTMLElement>(`[data-aktion='ansicht'][data-wert='${wert}']`)?.focus();
+        return this.sage(this.ansageText());
+      }
+      case "uebernehmen":
+        return this.uebernehmen();
       case "erneut":
         this.wechsle("laden");
         return void this.starte();
@@ -682,10 +748,13 @@ class Widget {
   private ansageText() {
     const r = this.ergebnis;
     if (!r) return "";
+    if (this.ansicht === "vergleich" && r.vergleich) return `Ansicht: So säße ${r.vergleich.groesse}.`;
     if (r.status === "empfohlen" && r.recommended_size) {
+      if (r.alternative_size) return `Sie liegen zwischen ${r.recommended_size} und ${r.alternative_size}, Passform ${this.passformText()}.`;
       return `Empfohlene Größe ${r.recommended_size}, Passform ${this.passformText()}.`;
     }
-    return "Keine sichere Größenempfehlung möglich.";
+    if (r.status === "unsicher") return "Keine sichere Größenempfehlung. Die Passform je Zone ist aufgeklappt.";
+    return "Keine Größe passt gut genug.";
   }
 
   private passformText() {
@@ -697,6 +766,11 @@ class Widget {
     if (!w) return;
     const kopf = w.querySelector<HTMLElement>("[data-kopf]");
     const inhalt = w.querySelector<HTMLElement>("[data-inhalt]");
+    // Aufgeklappte Zonen-Ansicht über das Neuzeichnen hinweg merken.
+    const zonen = w.querySelector<HTMLDetailsElement>("details.zonen");
+    if (this.detailsVorgabe !== null) this.detailsOffen = this.detailsVorgabe;
+    else if (zonen) this.detailsOffen = zonen.open;
+    this.detailsVorgabe = null;
     if (kopf) kopf.innerHTML = this.htmlKopf();
     if (inhalt) inhalt.innerHTML = this.html();
   }
@@ -816,7 +890,7 @@ class Widget {
           <span><strong>Kein Maßband zur Hand?</strong><span>Dann nutzen Sie bitte die Größentabelle des Shops.</span></span>
           <span aria-hidden="true">›</span>
         </button>
-        <div class="fuss"><button type="submit" class="primaer">${letzter ? "Weiter zur Passform" : "Weiter"}</button></div>
+        <div class="fuss"><button type="submit" class="primaer">${this.einzelAenderung ? "Neu berechnen" : letzter ? "Weiter zur Passform" : "Weiter"}</button></div>
       </form>`;
   }
 
@@ -880,43 +954,156 @@ class Widget {
       </div>`;
   }
 
+  /** Ergebnis (Figma E09, E09b, E10, E37, E38). Unten fest: „Größe … übernehmen“ und Links. */
   private htmlErgebnis() {
     const r = this.ergebnis!;
-    const kopf =
-      r.status === "empfohlen" && r.recommended_size
-        ? `<div class="ergebnis">
-            <div class="kreis" aria-hidden="true"><span>${escape(r.recommended_size)}</span></div>
-            <div><strong>Größe ${escape(r.recommended_size)}</strong><span class="leise">Sicherheit: ${sicherheitInWorten(r.confidence)}</span></div>
-          </div>`
-        : r.status === "keine_passende_groesse"
-          ? `<p>Leider passt Ihnen keine der verfügbaren Größen gut genug. Bitte nutzen Sie die Größentabelle des Shops.</p>`
-          : `<p>Für Ihre Maße können wir bei diesem Artikel keine sichere Größe empfehlen. Bitte nutzen Sie die Größentabelle des Shops.</p>`;
-    const zusatz = [
-      r.status === "empfohlen" && r.alternative_size ? `<p>Sie liegen zwischen zwei Größen. ${escape(r.alternative_size)} passt fast genauso gut.</p>` : "",
-      r.status === "empfohlen" && r.begrenzt_durch_schnitt
-        ? `<p class="leise">Dieser Artikel ist anders geschnitten als Ihre Wahl. Wir haben die Empfehlung daran angepasst.</p>`
-        : "",
-    ].join("");
+    const passform = `<form novalidate data-formular="ergebnis">${this.htmlPassform()}</form>`;
 
-    const konto = this.token
-      ? `${this.meldung ? `<p class="karte" role="status">${escape(this.meldung)}</p>` : `<p class="leise">Ihre Maße sind gespeichert.</p>`}
-         ${this.meinLink()}
-         <button type="button" class="link" data-aktion="abmelden">Abmelden</button>`
-      : `<button type="button" class="sekundaer" data-aktion="speichern">Maße für den nächsten Einkauf speichern</button>`;
+    if (r.status === "keine_passende_groesse" || !r.haupt) {
+      return `<div class="${this.reveal ? "reveal" : ""}">
+          ${passform}
+          <div class="folge">
+            <div class="karte-ergebnis">
+              <h2 id="ox-titel" tabindex="-1">Keine Größe passt gut genug</h2>
+              <p>Bei diesem Artikel passt Ihnen mit dieser Passform leider keine Größe gut genug. Vielleicht klappt es mit einer anderen Passform, sonst hilft die Größentabelle des Shops.</p>
+            </div>
+            ${this.htmlAngaben()}
+            ${this.htmlKonto()}
+          </div>
+          <div class="fuss">
+            <button type="button" class="primaer" data-aktion="schliessen">Zur Größentabelle des Shops</button>
+            <div class="fuss-links"><button type="button" class="link" data-aktion="angaben" aria-expanded="${this.angabenOffen}">Angaben ändern</button></div>
+          </div>
+        </div>`;
+    }
+
+    const haupt = r.haupt;
+    const vergleich = r.vergleich;
+    const zeigt = this.ansicht === "vergleich" && vergleich ? vergleich : haupt;
+    const zwischen = r.status === "empfohlen" && Boolean(r.alternative_size) && vergleich !== null;
+    const unsicher = r.status === "unsicher";
+
+    let karte: string;
+    let warum = "";
+    if (unsicher) {
+      karte = `<div class="karte-ergebnis">
+          <h2 id="ox-titel" tabindex="-1">Wir sind uns bei diesem Artikel nicht sicher</h2>
+          <p class="leise">Ihre Maße passen nicht eindeutig zu einer Größe. Unten sehen Sie, wie ${escape(haupt.groesse)}${vergleich ? ` und ${escape(vergleich.groesse)}` : ""} sitzen würden.</p>
+        </div>`;
+    } else if (zwischen && vergleich) {
+      karte = `<div class="karte-zwei">
+          <div class="zwei-kopf">
+            <h2 id="ox-titel" tabindex="-1">Sie liegen zwischen ${escape(haupt.groesse)} und ${escape(vergleich.groesse)}</h2>
+            <span class="marke-klein">beide möglich</span>
+          </div>
+          <div class="zwei-raster">
+            ${[haupt, vergleich].map((g) => `<div class="mini"><strong>${escape(g.groesse)}</strong><p>${escape(groessenKurz(g, r.primaer))}</p></div>`).join("")}
+          </div>
+          <p><strong>Entscheidungshilfe:</strong> ${escape(entscheidungshilfe(haupt, vergleich, r.primaer))}</p>
+        </div>`;
+      warum = `<p><strong>Warum zwei?</strong> ${escape(`Bei der Passform „${passformWort(this.passform)}“ liegt der gewünschte Spielraum genau zwischen zwei Größen.`)}</p>`;
+    } else {
+      const istVergleich = zeigt !== haupt;
+      karte = `<div class="karte-ergebnis mit-kreis">
+          <div class="kreis" aria-hidden="true"><span>${escape(zeigt.groesse)}</span></div>
+          <div>
+            <h2 id="ox-titel" tabindex="-1">${istVergleich ? `So säße ${escape(zeigt.groesse)}` : `Ihre Größe: ${escape(zeigt.groesse)}`}</h2>
+            <p>${escape(istVergleich ? vergleichSatz(haupt, zeigt, r.primaer) : kurzSatz(zeigt, this.passform))}</p>
+            <p class="leise">${istVergleich ? `Empfohlen bleibt ${escape(haupt.groesse)}` : `Empfehlung: ${sicherheitText(r.confidence)}`}</p>
+          </div>
+        </div>`;
+      warum = `<p><strong>Warum ${escape(haupt.groesse)}?</strong> ${escape(warumSatz(haupt, r.primaer, this.passform))}</p>`;
+    }
+
+    const begrenzt = r.begrenzt_durch_schnitt ? `<p class="leise">${escape(begrenztSatz(r.schnitt, this.passform))}</p>` : "";
 
     return `<div class="${this.reveal ? "reveal" : ""}">
-        <h2 id="ox-titel" tabindex="-1">Ihre Empfehlung</h2>
-        ${kopf}
+        ${passform}
         <div class="folge">
-          ${zusatz ? `<div>${zusatz}</div>` : ""}
-          <form novalidate data-formular="ergebnis">${this.htmlPassform()}</form>
-          <button type="button" class="primaer" data-aktion="schliessen">Fertig</button>
-          <div>
-            <button type="button" class="sekundaer" data-aktion="masse-aendern">Maße ändern</button>
-            ${konto}
+          ${karte}
+          ${warum}${begrenzt}
+          ${this.htmlAngaben()}
+          ${this.htmlZonen(r.primaer, haupt, vergleich, zwischen || unsicher)}
+          ${this.htmlKonto()}
+        </div>
+        <div class="fuss">
+          <button type="button" class="primaer" data-aktion="uebernehmen">Größe ${escape(zeigt.groesse)} übernehmen</button>
+          <div class="fuss-links">
+            <button type="button" class="link" data-aktion="angaben" aria-expanded="${this.angabenOffen}">Angaben ändern</button>
+            ${this.token ? "" : `<button type="button" class="link" data-aktion="speichern">Maße speichern</button>`}
+            <button type="button" class="link" data-aktion="schliessen">Größentabelle</button>
           </div>
         </div>
       </div>`;
+  }
+
+  /** „Passform je Zone ansehen“ (Figma E09b/E10): Silhouette, Skalen, Umschalter zwischen zwei Größen. */
+  private htmlZonen(primaer: Zone, haupt: GroessenAnsicht, vergleich: GroessenAnsicht | null, gleichrangig: boolean) {
+    const zeigt = this.ansicht === "vergleich" && vergleich ? vergleich : haupt;
+    if (zeigt.zonen.length === 0) return "";
+    const knopf = (wert: "haupt" | "vergleich", text: string) =>
+      `<button type="button" data-aktion="ansicht" data-wert="${wert}" aria-pressed="${this.ansicht === wert}">${escape(text)}</button>`;
+    const umschalter = vergleich
+      ? `<div class="umschalter" role="group" aria-label="Größe für die Ansicht">
+          ${knopf("haupt", haupt.groesse)}${knopf("vergleich", gleichrangig ? vergleich.groesse : `So säße ${vergleich.groesse}`)}
+        </div>`
+      : "";
+    const zeilen = zeigt.zonen
+      .map(
+        (z) => `<li>
+          <div class="zone-text"><strong>${escape(zonenName(z.zone))}</strong><span>${escape(spielraumText(z))}<span class="nur-vorleser">, ${escape(bewertungText(z.bewertung))}</span></span></div>
+          <div class="skala" aria-hidden="true"><span class="wunsch"></span><span class="punkt${z.bewertung === "zu_eng" ? " eng" : ""}" style="left:${skalaProzent(z.lage)}%"></span></div>
+        </li>`,
+      )
+      .join("");
+    return `<details class="zonen" ${this.detailsOffen ? "open" : ""}>
+        <summary>Passform je Zone ansehen</summary>
+        <div class="zonen-inhalt">
+          <div class="zonen-kopf"><strong>Passform im Detail · ${escape(zeigt.groesse)}</strong>${umschalter}</div>
+          <div class="zonen-raster">
+            ${silhouette(zeigt, primaer)}
+            <ul class="zonen-liste">${zeilen}</ul>
+          </div>
+          <div class="achse" aria-hidden="true"><span>eng</span><span>gewünschte Passform</span><span>weit</span></div>
+          <ul class="legende" aria-hidden="true">
+            <li><span class="farbe passt"></span>sitzt wie gewünscht</li><li><span class="farbe eng"></span>enger</li><li><span class="farbe weit"></span>weiter</li>
+          </ul>
+          <p class="leise">Gemessen, nicht geschätzt: abgeglichen mit den echten Maßen dieses Artikels.</p>
+        </div>
+      </details>`;
+  }
+
+  /** „Ihre Angaben“ mit Ändern je Maß (Figma E37). Nach dem Ändern geht es direkt hierher zurück. */
+  private htmlAngaben() {
+    if (!this.angabenOffen) return "";
+    const zeilen = this.messFelder()
+      .map((f) => {
+        const regel = FELDER.find((x) => x.feld === f)!;
+        const wert = (this.roh[f] ?? "").trim();
+        return `<li><span>${escape(regel.beschriftung)} · ${wert ? `${escape(wert)} cm` : "nicht angegeben"}</span>
+          <button type="button" class="link" data-aktion="feld-aendern" data-feld="${f}" aria-label="${escape(regel.beschriftung)} ändern">Ändern</button></li>`;
+      })
+      .join("");
+    return `<section class="karte angaben" id="ox-angaben" tabindex="-1" aria-label="Ihre Angaben">
+        <div class="angaben-kopf"><strong>Ihre Angaben</strong><button type="button" class="link" data-aktion="angaben">Schließen</button></div>
+        <ul>${zeilen}</ul>
+        <p class="leise">Nach dem Ändern kommen Sie direkt hierher zurück.</p>
+      </section>`;
+  }
+
+  /** Angemeldet: Hinweis, Link zu „Mein Ommetryx“, Abmelden. */
+  private htmlKonto() {
+    if (!this.token) return "";
+    return `<div>
+        ${this.meldung ? `<p class="karte" role="status">${escape(this.meldung)}</p>` : `<p class="leise">Ihre Maße sind gespeichert.</p>`}
+        ${this.meinLink()}
+        <button type="button" class="link" data-aktion="abmelden">Abmelden</button>
+      </div>`;
+  }
+
+  /** „Größe … übernehmen“: folgt im zweiten Teil von 8b (Größe im Shop auswählen). */
+  private uebernehmen() {
+    this.schliessen();
   }
 
   /** Link zu „Mein Ommetryx“ (Maße ändern, Einwilligungen widerrufen, Daten herunterladen, löschen). */

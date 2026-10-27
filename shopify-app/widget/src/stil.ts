@@ -7,7 +7,7 @@ export const STIL = `
 .ox {
   --linen: #F6F4EF; --graphit: #1E2326; --sekundaer: #4F575C; --ink: #0C3A4A;
   --petrol-tief: #15788C; --petrol-mittel: #238397; --apricot: #DC5E2E; --terracotta: #B8492A;
-  --linie-stark: #7D868A; --linie: #D9D4CB; --fehler: #B3261E; --hinweis-flaeche: #E8F2F4;
+  --linie-stark: #7D868A; --linie: #D9D4CB; --fehler: #B3261E; --hinweis-flaeche: #E8F2F4; --zone-passt: #9CCAD4;
   /* Bewegungs-Tokens (Figma „Spezifikation · Ladebildschirm und Bewegung“) */
   --instant: 100ms cubic-bezier(0.2, 0, 0, 1);
   --fast: 180ms cubic-bezier(0.3, 0, 1, 1);
@@ -81,15 +81,79 @@ button { font: inherit; cursor: pointer; }
 fieldset { border: none; padding: 0; margin: 0 0 20px; }
 legend { font-weight: 600; font-size: 14px; margin-bottom: 8px; padding: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Passform: vier Chips in einer Reihe (Figma E09), bei Zoom umbrechend */
+.chips[role=radiogroup] { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; }
+.chips[role=radiogroup] .chip span { display: flex; justify-content: center; padding: 0 4px; font-size: 14px; border-radius: 12px; }
 .chip { position: relative; }
 .chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .chip span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--linie-stark); border-radius: 999px; background: #fff; }
 .chip input:checked + span { border: 2px solid var(--petrol-tief); color: var(--ink); font-weight: 600; }
 .chip input:focus-visible + span { outline: 2px solid var(--petrol-tief); outline-offset: 2px; }
 
-.ergebnis { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.kreis { flex: none; width: 96px; height: 96px; border-radius: 999px; background: var(--apricot); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 40px; line-height: 1.25; font-weight: 600; }
-.ergebnis strong { display: block; font-size: 20px; line-height: 1.25; }
+/* Ergebnis (Figma E09, E10): Karte mit Apricot-Kreis – Apricot nur hier, einmal pro Screen */
+.karte-ergebnis { background: var(--hinweis-flaeche); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+.karte-ergebnis.mit-kreis { display: flex; align-items: center; gap: 16px; }
+.karte-ergebnis h2 { margin: 0 0 4px; }
+.karte-ergebnis p { margin: 0 0 4px; font-size: 14px; }
+.karte-ergebnis p:last-child { margin-bottom: 0; }
+.kreis { flex: none; width: 64px; height: 64px; border-radius: 999px; background: var(--apricot); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; line-height: 1; font-weight: 600; }
+
+/* Zwischen zwei Größen (E38) */
+.karte-zwei { border: 2px solid var(--petrol-tief); border-radius: 16px; padding: 16px; margin-bottom: 16px; background: #fff; }
+.zwei-kopf { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.zwei-kopf h2 { margin: 0 0 12px; }
+.marke-klein { flex: none; font-size: 12px; font-weight: 600; color: var(--ink); border: 1px solid var(--ink); border-radius: 999px; padding: 2px 10px; }
+.zwei-raster { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.mini { background: var(--hinweis-flaeche); border-radius: 12px; padding: 12px; }
+.mini strong { display: block; font-size: 20px; margin-bottom: 4px; }
+.mini p { margin: 0; font-size: 14px; color: var(--sekundaer); }
+.karte-zwei > p { margin: 0; font-size: 14px; }
+
+/* Passform je Zone (E09b) */
+details.zonen { border: 1px solid var(--linie); border-radius: 16px; background: #fff; margin-bottom: 16px; }
+details.zonen summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 16px; font-weight: 600; border-radius: 16px; }
+details.zonen summary::-webkit-details-marker { display: none; }
+details.zonen summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--graphit); border-bottom: 2px solid var(--graphit); transform: rotate(45deg) translate(-2px, -2px); transition: transform var(--fast); }
+details.zonen[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.zonen-inhalt { padding: 0 16px 16px; }
+.zonen-kopf { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.umschalter { display: inline-flex; border: 1px solid var(--linie-stark); border-radius: 12px; overflow: hidden; }
+.umschalter button { min-height: 44px; padding: 0 14px; border: none; background: #fff; color: var(--graphit); font: inherit; font-size: 14px; }
+.umschalter button[aria-pressed="true"] { background: var(--ink); color: #fff; font-weight: 600; }
+.umschalter button:focus-visible { outline-offset: -4px; }
+.zonen-raster { display: grid; grid-template-columns: 88px 1fr; gap: 16px; align-items: start; }
+.silhouette { width: 88px; height: auto; display: block; }
+.silhouette .umriss { fill: #EFEAE2; stroke: #CFC7BA; stroke-width: 1; }
+.silhouette .passt { fill: var(--zone-passt); }
+.silhouette .eng { fill: var(--terracotta); }
+.silhouette .weit { fill: var(--linie-stark); }
+.zonen-liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.zone-text { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; margin-bottom: 6px; }
+.zone-text > span { color: var(--sekundaer); text-align: right; }
+.skala { position: relative; height: 6px; border-radius: 999px; background: var(--linie); }
+.skala .wunsch { position: absolute; left: 33.33%; width: 33.34%; top: 0; bottom: 0; background: var(--zone-passt); }
+.skala .punkt { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 999px; background: var(--petrol-tief); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--petrol-tief); }
+.skala .punkt.eng { background: var(--terracotta); box-shadow: 0 0 0 1px var(--terracotta); }
+.achse { display: flex; justify-content: space-between; font-size: 12px; color: var(--sekundaer); margin: 12px 0 8px; }
+.legende { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 0; margin: 0 0 12px; font-size: 12px; color: var(--sekundaer); }
+.legende li { display: flex; align-items: center; gap: 6px; }
+.farbe { width: 16px; height: 6px; border-radius: 999px; }
+.farbe.passt { background: var(--zone-passt); }
+.farbe.eng { background: var(--terracotta); }
+.farbe.weit { background: var(--linie-stark); }
+.zonen-inhalt > p { margin: 0; font-size: 12px; }
+
+/* Ihre Angaben (E37) */
+.angaben { scroll-margin-top: 16px; }
+.angaben-kopf { display: flex; align-items: center; justify-content: space-between; }
+.angaben ul { list-style: none; margin: 4px 0 8px; padding: 0; }
+.angaben li { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--linie); font-size: 14px; }
+.angaben .link, .angaben-kopf .link { font-size: 14px; }
+.angaben > p { margin: 0; font-size: 12px; }
+
+.fuss-links { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.fuss-links { flex-wrap: wrap; }
+.fuss-links .link { font-size: 14px; min-height: 44px; white-space: nowrap; }
 
 /* Kopfzeile der Mess-Schritte: Zurück · „Brust · 2 von 4“ · Schließen, darunter Fortschritt */
 .kopf-schritt { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; padding: 12px 12px 8px; }
