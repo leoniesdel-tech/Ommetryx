@@ -8,13 +8,9 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
-import {
-  bestaetigeAvv,
-  einrichtungsSchritte,
-  ladeEinrichtung,
-  setzeAusgeblendet,
-  setzePositionGeprueft,
-} from "../haendler/einrichtung.server";
+// Wichtig: Was die Seiten-Komponente braucht, darf nicht aus einer .server-Datei kommen.
+import { einrichtungsSchritte } from "../haendler/einrichtung";
+import { bestaetigeAvv, ladeEinrichtung, setzeAusgeblendet, setzePositionGeprueft } from "../haendler/einrichtung.server";
 import { AVV, BLOCK_HANDLE, EXTENSION_HANDLE } from "../haendler/texte";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {

@@ -1,8 +1,8 @@
 // Einrichtung im Admin (Figma H01): Reihenfolge und Fortschritt der fünf Schritte.
 
 import { describe, expect, it } from "vitest";
-import { einrichtungsSchritte } from "../app/haendler/einrichtung.server";
-import type { Einrichtung } from "../app/haendler/einrichtung.server";
+import { einrichtungsSchritte } from "../app/haendler/einrichtung";
+import type { Einrichtung } from "../app/haendler/einrichtung";
 
 const neu: Einrichtung = {
   avvBestaetigt: false,
