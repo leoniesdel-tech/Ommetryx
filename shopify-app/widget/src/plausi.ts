@@ -52,7 +52,8 @@ export function pruefePlausibel(feld: Feld, wert: number, andere: Partial<Record
   if (feld === "koerpergroesse") {
     if (wert >= 1 && wert <= 2.3) {
       const cm = Math.round(wert * 100);
-      return { art: "vorschlag", wert: cm, frage: `${zahl(wert)} m? Meinten Sie ${cm} cm?` };
+      const meter = wert.toLocaleString("de-DE", { maximumFractionDigits: 2 });
+      return { art: "vorschlag", wert: cm, frage: `${meter} m? Meinten Sie ${cm} cm?` };
     }
     if (!imBereich(feld, wert) && imBereich(feld, wert / 10)) {
       return { art: "vorschlag", wert: wert / 10, frage: `${zahl(wert)} cm? Meinten Sie ${zahl(wert / 10)} cm?` };

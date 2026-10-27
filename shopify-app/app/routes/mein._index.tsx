@@ -111,7 +111,7 @@ export default function MeinUebersicht() {
                 <option value="">Keine Angabe</option>
                 {ALTERSGRUPPEN.map((g) => (
                   <option key={g} value={g}>
-                    {g} Jahre
+                    {g.replace("-", "–")} Jahre
                   </option>
                 ))}
               </select>

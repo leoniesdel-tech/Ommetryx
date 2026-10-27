@@ -511,6 +511,8 @@ class Widget {
     const werte: Partial<Record<Feld, number>> = {};
     for (const f of this.messFelder()) {
       if (f === feld) continue;
+      // Mit „Stimmt so“ bestätigte Ausreißer nicht zum Maßstab machen, sonst folgt Nachfrage auf Nachfrage.
+      if (this.bestaetigt[f] !== undefined && this.bestaetigt[f] === (this.roh[f] ?? "").trim()) continue;
       const w = alsZahl(this.roh[f]);
       if (w !== null && !Number.isNaN(w)) werte[f] = w;
     }
@@ -558,7 +560,11 @@ class Widget {
       case "vorschlag-uebernehmen": {
         if (this.hinweis?.hinweis.art !== "vorschlag") return;
         const feld = this.hinweis.feld;
-        this.roh[feld] = String(this.hinweis.hinweis.wert).replace(".", ",");
+        const wert = String(this.hinweis.hinweis.wert).replace(".", ",");
+        this.roh[feld] = wert;
+        // Auch im Feld setzen, denn weiter() liest den Wert aus dem Feld.
+        const eingabe = this.wurzel?.getElementById(`ox-${feld}`) as HTMLInputElement | null;
+        if (eingabe) eingabe.value = wert;
         this.hinweis = null;
         return this.weiter();
       }
@@ -810,7 +816,7 @@ class Widget {
           <span><strong>Kein Maßband zur Hand?</strong><span>Dann nutzen Sie bitte die Größentabelle des Shops.</span></span>
           <span aria-hidden="true">›</span>
         </button>
-        <button type="submit" class="primaer">${letzter ? "Weiter zur Passform" : "Weiter"}</button>
+        <div class="fuss"><button type="submit" class="primaer">${letzter ? "Weiter zur Passform" : "Weiter"}</button></div>
       </form>`;
   }
 
@@ -854,10 +860,10 @@ class Widget {
           <label for="ox-altersgruppe">Altersgruppe (optional)</label>
           <select id="ox-altersgruppe" name="altersgruppe">
             <option value="">Keine Angabe</option>
-            ${ALTERSGRUPPEN.map((g) => `<option value="${g}" ${this.altersgruppe === g ? "selected" : ""}>${g} Jahre</option>`).join("")}
+            ${ALTERSGRUPPEN.map((g) => `<option value="${g}" ${this.altersgruppe === g ? "selected" : ""}>${g.replace("-", "–")} Jahre</option>`).join("")}
           </select>
         </div>
-        <button type="submit" class="primaer">Größe berechnen</button>
+        <div class="fuss"><button type="submit" class="primaer">Größe berechnen</button></div>
       </form>`;
   }
 

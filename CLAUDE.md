@@ -315,9 +315,11 @@ Bis zur Klärung nicht raten.
 7. **Kontrollgruppe:** Hash der Warenkorb-Kennung auf dem Server, Markierung „mit Ommetryx“ am Warenkorb. Die Technik muss vorher in der Shopify-Doku geprüft werden. Bestell- und Retourendaten brauchen Zugriffsrechte (Stufe 1).
 8. **`customers/redact`:** Da wir keine Shopify-Kunden verknüpfen, nur die Einträge zu den genannten Bestellungen löschen, nicht das Profil.
 
-**Etappe 8a (begonnen 26.10., Zwischenstand – im Browser noch NICHT getestet)**
+**Etappe 8a (26.–27.10., im Browser getestet, wartet auf Leonies OK)**
 - Widget neu: Mess-Schritte einzeln (Kopf „Brust · 2 von 4“, Fortschritt, Video-Platzhalter, Warum-Satz, zugeklappter Kurz-Tipp, „Kein Maßband?“-Karte → schließt), Passform-Schritt mit Altersgruppe, Ladebildschirm mit Logo in 3 Etappen (Figma E36/E36b, Spezifikation 2004:301), Ergebnis-Reveal, Passform-Umschalter rechnet ohne Lader.
 - Plausibilität `widget/src/plausi.ts` (Tippfehler, Meter, Zoll, > 6 cm Abweichung); Werte in `ergaenzungen-v3.json` → `plausibilitaet` (Konfektionstabelle Damen Gr. 40, Mitgründer prüfen; Herren fehlen). Figur-Schritt bewusst weggelassen (Regeln fehlen, Datensparsamkeit).
 - Logo-Ebenen aus Figma (`assets/ox-logo-*.svg`). Sora: Theme-Erweiterungen erlauben keine .woff2 → `widget/schrift/sora-latin.woff2` wird beim Bauen als Base64 in `assets/ommetryx-schrift.css` eingebettet.
-- **Nächster Schritt:** App starten (lief zuletzt in Tab „App starten“), im eingebauten Browser die Testbluse durchspielen (920 → Vorschlag, Hüfte 78 → Nachfrage, Ladebildschirm, Ergebnis), dann Commit/Push. Danach 8b (Warum M?, Zonen-Ansicht, So säße L, Größe übernehmen).
+- Feste Fußleiste (`.fuss`, sticky) mit „Weiter“ wie Figma E03–E06. Ein mit „Stimmt so“ bestätigter Ausreißer fließt nicht in die Erwartung der anderen Maße ein (sonst Nachfrage auf Nachfrage). Altersgruppen werden mit Halbgeviertstrich angezeigt („16–29“), gespeichert bleibt „16-29“.
+- 27.10. getestet (Handy-Ansicht 375×812): 1,68 → „1,68 m? Meinten Sie 168 cm?“, 920 → 92, Hüfte 78 → Nachfrage → „Stimmt so“, Taille 76 ohne Folge-Nachfrage, Ladebildschirm 3 Stufen, Ergebnis 38 „Sicherheit hoch“.
+- **Nächster Schritt:** 8b (Warum M?, Zonen-Ansicht, So säße L, Hilfe zwischen zwei Größen, „unsicher“-Ansicht, Größe übernehmen).
 - **Falle:** Während `shopify app dev` läuft, führen Widget-Änderungen oft zu „Internal error … on our end“ und Absturz → App nach Widget-Builds neu starten (vorher übrige `react-router dev`-Prozesse beenden).

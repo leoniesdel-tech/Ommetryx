@@ -11,7 +11,7 @@ describe("Tippfehler und Einheiten", () => {
   });
 
   it("Körpergröße in Metern → Vorschlag in cm", () => {
-    expect(pruefePlausibel("koerpergroesse", 1.68, {}, k)).toMatchObject({ art: "vorschlag", wert: 168 });
+    expect(pruefePlausibel("koerpergroesse", 1.68, {}, k)).toEqual({ art: "vorschlag", wert: 168, frage: "1,68 m? Meinten Sie 168 cm?" });
     expect(pruefePlausibel("koerpergroesse", 1680, {}, k)).toMatchObject({ art: "vorschlag", wert: 168 });
     expect(pruefePlausibel("koerpergroesse", 168, {}, k)).toBeNull();
   });
