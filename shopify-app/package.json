@@ -10,7 +10,7 @@
     "config:use": "shopify app config use",
     "env": "shopify app env",
     "start": "react-router-serve ./build/server/index.js",
-    "docker-start": "npm run setup && npm run start",
+    "server:vorbereiten": "prisma migrate deploy && node scripts/db-rollen.mjs && node scripts/db-rechte.mjs",
     "setup": "prisma generate && prisma migrate deploy",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "shopify",
@@ -26,6 +26,7 @@
     "widget:bauen": "node widget/bauen.mjs",
     "widget:beobachten": "node widget/bauen.mjs --beobachten",
     "db:rechte": "node scripts/db-rechte.mjs",
+    "db:rollen": "node scripts/db-rollen.mjs",
     "pflege": "tsx scripts/pflege.ts"
   },
   "type": "module",

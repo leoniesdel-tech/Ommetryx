@@ -409,3 +409,9 @@ Bis zur Klärung nicht raten.
 - **Nächster Schritt:** 10d Abo-Seite, braucht Preise (nur USD) und Zugang zur Partner-API. Parallel: 5.1.5 und Rolle von Ommetryx klären, Du-Texte gegenlesen.
 
 **10d zurückgestellt (2.11.):** Preise noch nicht validiert (Leonie). Abo-Seite erst bauen, wenn Pläne, Preise (USD) und Testphase feststehen. Keine Preise raten.
+
+**Start vorbereitet (2.11., nichts geschaltet):** `docs/start-checkliste.md` (Reihenfolge A–F) ist die Quelle für den Weg auf den Server.
+- `Dockerfile` und `.dockerignore` im Hauptordner (Bau braucht `packages/`), `render.yaml` mit `autoDeploy: false`, Web-Dienst, Cron `npm run pflege`, Postgres Frankfurt. Docker-Bau nie lokal getestet (Docker fehlt).
+- `app/kundin/mail.server.ts`: in Produktion Brevo (`BREVO_API_KEY`, `OX_MAIL_ABSENDER`), sonst Entwicklungs-Postfach. Echter Versand nie getestet.
+- `app/lib/umgebung.ts`: Server startet in Produktion nicht ohne alle Einstellungen, meldet nur Namen. `/gesund` für Render. Produktions-Build lokal gestartet und geprüft.
+- `npm run server:vorbereiten` (Migration, `db-rollen.mjs`, Rechte) läuft bei jedem Deploy. `prisma/startwerte.ts` bewusst nicht: ersetzt die Konfiguration, nur einmalig.

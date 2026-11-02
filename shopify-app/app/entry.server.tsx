@@ -5,7 +5,11 @@ import { createReadableStreamFromReadable } from "@react-router/node";
 import { type EntryContext } from "react-router";
 import { isbot } from "isbot";
 import { setzeSicherheitsKopfzeilen } from "./lib/sicherheit";
+import { pruefeUmgebung } from "./lib/umgebung";
 import { addDocumentResponseHeaders } from "./shopify.server";
+
+// Fehlt in Produktion eine Einstellung, startet der Server gar nicht erst.
+pruefeUmgebung();
 
 export const streamTimeout = 5000;
 

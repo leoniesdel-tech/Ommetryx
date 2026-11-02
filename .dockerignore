@@ -1,0 +1,10 @@
+**/node_modules
+**/build
+**/.env
+**/.env.*
+.git
+.theme-arbeit
+docs
+shopify-app/.shopify
+shopify-app/.react-router
+shopify-app/test
