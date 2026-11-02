@@ -415,3 +415,5 @@ Bis zur Klärung nicht raten.
 - `app/kundin/mail.server.ts`: in Produktion Brevo (`BREVO_API_KEY`, `OX_MAIL_ABSENDER`), sonst Entwicklungs-Postfach. Echter Versand nie getestet.
 - `app/lib/umgebung.ts`: Server startet in Produktion nicht ohne alle Einstellungen, meldet nur Namen. `/gesund` für Render. Produktions-Build lokal gestartet und geprüft.
 - `npm run server:vorbereiten` (Migration, `db-rollen.mjs`, Rechte) läuft bei jedem Deploy. `prisma/startwerte.ts` bewusst nicht: ersetzt die Konfiguration, nur einmalig.
+
+**Preis-Validierung (2.11.):** Leitfaden für Händlergespräche: https://claude.ai/artifact/BEn2YtShPjf2coimAsW6vX (privat, Leonie teilt ihn selbst). Offen dort: kostenloser Plan laut Stand gegen drei Pakete in Figma H06; „Vermessung inklusive“ als Kostentreiber.
