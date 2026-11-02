@@ -188,8 +188,31 @@ model Shop {
 
   artikel         Artikel[]
   produktWuensche ProduktWunsch[]
+  musterSendungen MusterSendung[]
 
   @@map("shop")
+  @@schema("app")
+}
+
+/// Muster-Versand (Figma H04): Anfrage des Händlers, Status pflegt das Team von Hand (MVP ohne Paketdienst).
+model MusterSendung {
+  id             Int      @id @default(autoincrement())
+  shopId         Int      @map("shop_id")
+  /// "paket" oder "termin"
+  art            String
+  /// Vorgemerkte Produkte zum Zeitpunkt der Anfrage
+  anzahlArtikel  Int      @map("anzahl_artikel")
+  nachricht      String?
+  /// angemeldet, unterwegs, wird_vermessen, rueckversand, zurueck
+  status         String   @default("angemeldet")
+  sendungsnummer String?  @map("sendungsnummer")
+  erstelltAm     DateTime @default(now()) @map("erstellt_am")
+  geaendertAm    DateTime @updatedAt @map("geaendert_am")
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, erstelltAm])
+  @@map("muster_sendung")
   @@schema("app")
 }
 

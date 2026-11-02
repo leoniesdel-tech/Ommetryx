@@ -59,3 +59,13 @@ export async function setzePositionGeprueft(shop: string, geprueft: boolean) {
 export async function setzeAusgeblendet(shop: string, ausgeblendet: boolean) {
   await db.shop.update({ where: { domain: shop }, data: { einrichtungAusgeblendet: ausgeblendet } });
 }
+
+/** Stand des AVV für die Seite „Datenschutz & Verträge“. */
+export async function ladeAvvStand(shop: string) {
+  const zeile = await db.shop.findUnique({ where: { domain: shop }, select: { avvVersion: true, avvBestaetigtAm: true } });
+  return {
+    version: zeile?.avvVersion ?? null,
+    bestaetigtAm: zeile?.avvBestaetigtAm?.toISOString() ?? null,
+    aktuell: zeile?.avvVersion === AVV.version && Boolean(zeile?.avvBestaetigtAm),
+  };
+}

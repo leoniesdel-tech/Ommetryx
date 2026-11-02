@@ -169,10 +169,14 @@ export default function Startseite() {
         );
       case "muster":
         return (
-          <s-paragraph>
-            Wir vermessen jedes Kleidungsstück in jeder Größe selbst. Schicken Sie uns je Größe ein Muster oder vereinbaren Sie einen Termin vor
-            Ort. Die Seite „Muster-Versand“ dafür folgt in Kürze.
-          </s-paragraph>
+          <s-stack gap="base">
+            <s-paragraph>Wir vermessen jedes Kleidungsstück in jeder Größe selbst. Schicken Sie uns je Größe ein Muster oder vereinbaren Sie einen Termin vor Ort.</s-paragraph>
+            <s-stack direction="inline" gap="base">
+              <s-button variant="primary" href="/app/muster">
+                Zum Muster-Versand
+              </s-button>
+            </s-stack>
+          </s-stack>
         );
     }
   };

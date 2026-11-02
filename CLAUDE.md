@@ -365,3 +365,10 @@ Bis zur Klärung nicht raten.
 - Grammatik korrigiert: „Bitte geben Sie Ihre Körpergröße …“ (vorher „Ihren“).
 - Gegenlese-Liste: `docs/du-texte-gegenlesen.md` im Gründungssemester-Ordner (35 Stellen).
 - **Nächster Schritt:** Leonies Korrekturen zu den Du-Texten einarbeiten, dann 9d (Datenschutz & Verträge, Hilfe, Muster-Versand).
+
+**Etappe 9d (2.11., im Admin angesehen, nichts gespeichert; Etappe 9 damit gebaut)**
+- Muster-Versand: Tabelle `MusterSendung` (Migration `muster_sendung`), `app/haendler/muster.ts` + `muster.server.ts`, Seite `app/routes/app.muster.tsx` (Anfrage Paket/Termin, Stand, frühere Sendungen; ohne vorgemerkte Produkte gesperrt, keine doppelte offene Anfrage). Status und Sendungsnummer pflegt das Team unter `/intern/shops/:shop`.
+- `app/routes/app.datenschutz.tsx` (AVV-Stand, Verträge, Unterauftragsverarbeiter, Textbausteine) und `app/routes/app.hilfe.tsx`; Texte in `app/haendler/texte.ts`. Textbaustein bewusst abweichend von Figma H07: kein Gewicht/Figur (nicht im MVP), Shop sieht nur zusammengefasste Zahlen.
+- **Offen vor dem Start (Leonie/Anwalt):** vollständiger AVV-Text fehlt – der Händler bestätigt „gelesen“, kann aber bisher nur die Kurzfassung lesen, deshalb darf kein echter Händler bestätigen, bevor der Volltext in der App steht. Außerdem TOMs, AGB, Impressum (Firma, Anschrift), Kontakt-E-Mail, Antwortzeit, Kostenregel Muster-Versand, Mindestzahl Termin vor Ort, Frist für Änderungen an Unterauftragsverarbeitern, Monitoring-Dienst.
+- Figma H04 weicht ab: Anfrage statt „Versandetikett erstellen“ (Leonie-Entscheidung 27.10.).
+- **Nächster Schritt:** Leonie probiert Etappe 9 aus und gibt die Du-Texte frei, dann Plan für die nächste Etappe (Webhooks, Managed Pricing, Rückmeldungen).

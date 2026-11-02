@@ -20,7 +20,10 @@ export default function App() {
       <s-app-nav>
         <s-link href="/app">Startseite</s-link>
         <s-link href="/app/produkte">Produkte</s-link>
+        <s-link href="/app/muster">Muster-Versand</s-link>
         <s-link href="/app/einstellungen">Einstellungen</s-link>
+        <s-link href="/app/datenschutz">Datenschutz & Verträge</s-link>
+        <s-link href="/app/hilfe">Hilfe</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>
