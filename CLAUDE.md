@@ -417,3 +417,8 @@ Bis zur Klärung nicht raten.
 - `npm run server:vorbereiten` (Migration, `db-rollen.mjs`, Rechte) läuft bei jedem Deploy. `prisma/startwerte.ts` bewusst nicht: ersetzt die Konfiguration, nur einmalig.
 
 **Preis-Validierung (2.11.):** Leitfaden für Händlergespräche: https://claude.ai/artifact/BEn2YtShPjf2coimAsW6vX (privat, Leonie teilt ihn selbst). Offen dort: kostenloser Plan laut Stand gegen drei Pakete in Figma H06; „Vermessung inklusive“ als Kostentreiber.
+
+**Messbuch M1 (2.11., im Browser getestet, nur lokal):** `/intern/messbuch` für Händler-Muster und selbst gekaufte Teile, unabhängig von installierten Shops. Tabellen `MessArtikel`, `MessGroesse` (Migration `messbuch`), `app/intern/messbuch.ts` + `messbuch.server.ts`, `MessFormular.tsx`. Prüfung über `pruefeErfassung` (Flachmaß, Umfänge × 2). Größen behalten beim Bearbeiten ihre Einträge, damit in M2 Fotos daran hängen können.
+- Entscheidung (2.11.): keine eigene App, sondern `/intern` im Browser; beide Arten von Teilen; vorerst lokal.
+- **M2 Fotos:** Mitgründer klären lassen, welche Ansichten, Auflösung, Lage des A4-Blatts und ob Originale bleiben sollen. Standortdaten aus Fotos entfernen, keine Personen. Vor echter Nutzung am Handy: `/intern` auf den Server (Leonies OK, Render).
+- **M3:** Export und Übernahme in Shop-Artikel. Offen: Messbuch-Einträge von Händler-Mustern bei `shop/redact` (Anwaltsliste); `shop/redact` berührt das Messbuch bisher nicht.

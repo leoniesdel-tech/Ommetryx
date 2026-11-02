@@ -124,6 +124,21 @@ export function eingabeAusFormular(form: FormData): ErfassungEingabe {
   };
 }
 
+/** Hinweise (keine Fehler): Maße sollten von Größe zu Größe wachsen. */
+export function wachstumsHinweise(groessen: { groesse: string; masse: Masse }[]): string[] {
+  const hinweise: string[] = [];
+  for (const { feld, beschriftung } of MASSFELDER) {
+    for (let i = 1; i < groessen.length; i++) {
+      const vorher = groessen[i - 1]!.masse[feld];
+      const jetzt = groessen[i]!.masse[feld];
+      if (vorher !== undefined && jetzt !== undefined && jetzt <= vorher) {
+        hinweise.push(`${beschriftung}: Größe ${groessen[i]!.groesse} ist nicht größer als ${groessen[i - 1]!.groesse}. Bitte nachmessen.`);
+      }
+    }
+  }
+  return hinweise;
+}
+
 /** Prüft die Eingabe und rechnet Flachmaße in Umfänge um. */
 export function pruefeErfassung(eingabe: ErfassungEingabe, k: Konfiguration): Pruefergebnis {
   const fehler: Record<string, string> = {};
@@ -177,16 +192,7 @@ export function pruefeErfassung(eingabe: ErfassungEingabe, k: Konfiguration): Pr
     return { groesse: g.groesse, shopifyVarianteId: g.shopifyVarianteId, reihenfolge: g.reihenfolge, masse };
   });
 
-  // Hinweis (kein Fehler): Maße sollten von Größe zu Größe wachsen.
-  for (const { feld, beschriftung } of MASSFELDER) {
-    for (let i = 1; i < groessen.length; i++) {
-      const vorher = groessen[i - 1]!.masse[feld];
-      const jetzt = groessen[i]!.masse[feld];
-      if (vorher !== undefined && jetzt !== undefined && jetzt <= vorher) {
-        hinweise.push(`${beschriftung}: Größe ${groessen[i]!.groesse} ist nicht größer als ${groessen[i - 1]!.groesse}. Bitte nachmessen.`);
-      }
-    }
-  }
+  hinweise.push(...wachstumsHinweise(groessen));
 
   if (Object.keys(fehler).length > 0) return { ok: false, fehler, hinweise };
   return {

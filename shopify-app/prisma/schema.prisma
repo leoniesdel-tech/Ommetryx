@@ -231,6 +231,62 @@ model KleidungsArchiv {
   @@schema("app")
 }
 
+/// Messbuch (/intern/messbuch): vermessene Teile unabhängig von installierten Shops,
+/// Händler-Muster und selbst gekaufte Teile. Maße wie bei ArtikelGroesse: Umfänge in cm (Flachmaß × 2).
+model MessArtikel {
+  id                      Int      @id @default(autoincrement())
+  /// "eigen" oder "haendler"
+  herkunft                String
+  onlineShop              String   @map("online_shop")
+  marke                   String?
+  produktname             String
+  link                    String?
+  notiz                   String?
+  /// Artikelart aus der Konfiguration, z. B. web_oberteil
+  kategorie               String
+  schnitt                 String
+  materialDehnungProzent  Float    @map("material_dehnung_prozent")
+  materialZusammensetzung String?  @map("material_zusammensetzung")
+  tailliert               Boolean  @default(false)
+  bundTyp                 String?  @map("bund_typ")
+  aermelTyp               String?  @map("aermel_typ")
+  messhoeheBrustCm        Float    @default(2.5) @map("messhoehe_brust_cm")
+  erstelltAm              DateTime @default(now()) @map("erstellt_am")
+  geaendertAm             DateTime @updatedAt @map("geaendert_am")
+
+  groessen MessGroesse[]
+
+  @@index([kategorie])
+  @@index([onlineShop])
+  @@map("mess_artikel")
+  @@schema("app")
+}
+
+model MessGroesse {
+  id            Int      @id @default(autoincrement())
+  artikelId     Int      @map("artikel_id")
+  groesse       String
+  reihenfolge   Int
+  brust         Float?
+  taille        Float?
+  huefte        Float?
+  oberschenkel  Float?
+  oberarm       Float?
+  schulter      Float?
+  armlaenge     Float?
+  gesamtlaenge  Float?
+  gemessenVonId Int?     @map("gemessen_von_id")
+  gemessenAm    DateTime @default(now()) @map("gemessen_am")
+
+  artikel     MessArtikel   @relation(fields: [artikelId], references: [id], onDelete: Cascade)
+  gemessenVon TeamMitglied? @relation(fields: [gemessenVonId], references: [id], onDelete: SetNull)
+
+  @@unique([artikelId, groesse])
+  @@index([groesse])
+  @@map("mess_groesse")
+  @@schema("app")
+}
+
 /// Muster-Versand (Figma H04): Anfrage des Händlers, Status pflegt das Team von Hand (MVP ohne Paketdienst).
 model MusterSendung {
   id             Int      @id @default(autoincrement())
@@ -359,6 +415,7 @@ model TeamMitglied {
 
   sitzungen    TeamSitzung[]
   vermessungen Vermessung[]
+  messGroessen MessGroesse[]
 
   @@map("team_mitglied")
   @@schema("app")
