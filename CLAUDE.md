@@ -398,3 +398,6 @@ Bis zur Klärung nicht raten.
   - **5.1.5 Kundendaten an den Händler zurückgeben: Konflikt mit Abschnitt 6/9** (Händler sieht keine Körpermaße). Muss vor der Einreichung mit Shopify Partner Support und Anwalt geklärt werden. Nicht eigenmächtig ändern.
   - Offen: 1.2.1–1.2.3 Abrechnung (10d), 3.1.1 TLS (`application_url` noch example.com, erst mit Hosting prüfbar).
 - Noch nie mit echten Werten gelaufen: Block mit `ommetryx.aktiv`/`ommetryx.button` (AVV offen), Größenwechsel im echten Shop.
+
+**Regel 5.1.5 (2.11.):** Entwurf der Support-Anfrage liegt in `docs/anfrage-shopify-support-5-1-5.md` (Gründungssemester-Ordner), noch nicht abgeschickt, Leonie schickt selbst.
+- **Anwaltsliste, wichtig:** Rolle von Ommetryx klären. Der AVV sagt „im Auftrag“ (Auftragsverarbeiter, Händler verantwortlich), das shopübergreifende Profil, „Mein Ommetryx“ und das Kleidungs-Archiv sprechen für eine eigene Verantwortlichkeit. Das beeinflusst 5.1.5, AVV-Text und Einwilligungen.
