@@ -282,6 +282,7 @@ model MessGroesse {
   artikel     MessArtikel   @relation(fields: [artikelId], references: [id], onDelete: Cascade)
   gemessenVon TeamMitglied? @relation(fields: [gemessenVonId], references: [id], onDelete: SetNull)
   foto        MessFoto?
+  programm    MessProgrammMessung?
 
   @@unique([artikelId, groesse])
   @@index([groesse])
@@ -306,6 +307,27 @@ model MessFoto {
   groesse MessGroesse @relation(fields: [groesseId], references: [id], onDelete: Cascade)
 
   @@map("mess_foto")
+  @@schema("app")
+}
+
+/// Maße vom Vermessungsprogramm, getrennt von den Handmaßen in MessGroesse, damit beide vergleichbar bleiben.
+model MessProgrammMessung {
+  id              Int      @id @default(autoincrement())
+  groesseId       Int      @unique @map("groesse_id")
+  brust           Float?
+  taille          Float?
+  huefte          Float?
+  oberschenkel    Float?
+  oberarm         Float?
+  schulter        Float?
+  armlaenge       Float?
+  gesamtlaenge    Float?
+  programmVersion String?  @map("programm_version")
+  importiertAm    DateTime @default(now()) @map("importiert_am")
+
+  groesse MessGroesse @relation(fields: [groesseId], references: [id], onDelete: Cascade)
+
+  @@map("mess_programm_messung")
   @@schema("app")
 }
 

@@ -33,8 +33,9 @@ export function pruefeMessArtikel(form: FormData, k: Konfiguration): MessPruefun
   // Der Dehnungstest entfällt vorerst: Leer ist erlaubt, die Prüfung der Erfassung bekommt dann einen Platzhalter.
   const dehnung = eingabe.materialDehnungProzent;
   if (dehnung === null) eingabe.materialDehnungProzent = 0;
+  // Maße sind freiwillig: Sie kommen vom Vermessungsprogramm oder als Handmessung zum Vergleich.
   // Für das Messbuch ist die Herkunft egal: Die Meldung der Erfassung nennt Shopify, hier zählt nur „mindestens eine Größe“.
-  const pruefung = pruefeErfassung(eingabe, k);
+  const pruefung = pruefeErfassung(eingabe, k, { masseOptional: true });
   const fehler: Record<string, string> = pruefung.ok ? {} : { ...pruefung.fehler };
   if (fehler.groessen) fehler.groessen = "Bitte mindestens eine Größe hinzufügen.";
 

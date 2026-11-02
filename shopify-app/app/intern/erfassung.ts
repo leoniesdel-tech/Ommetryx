@@ -140,7 +140,7 @@ export function wachstumsHinweise(groessen: { groesse: string; masse: Masse }[])
 }
 
 /** Prüft die Eingabe und rechnet Flachmaße in Umfänge um. */
-export function pruefeErfassung(eingabe: ErfassungEingabe, k: Konfiguration): Pruefergebnis {
+export function pruefeErfassung(eingabe: ErfassungEingabe, k: Konfiguration, optionen: { masseOptional?: boolean } = {}): Pruefergebnis {
   const fehler: Record<string, string> = {};
   const hinweise: string[] = [];
 
@@ -163,8 +163,10 @@ export function pruefeErfassung(eingabe: ErfassungEingabe, k: Konfiguration): Pr
   const pflicht: Massfeld[] = [];
   if (!fehler.artikelart) {
     const art = k.artikelart(eingabe.artikelart);
-    pflicht.push(art.primaermass);
-    if (art.primaermass === "huefte" && art.messpunkte.taille && eingabe.bundTyp !== "gummizug") pflicht.push("taille");
+    if (!optionen.masseOptional) {
+      pflicht.push(art.primaermass);
+      if (art.primaermass === "huefte" && art.messpunkte.taille && eingabe.bundTyp !== "gummizug") pflicht.push("taille");
+    }
     if (art.messpunkte.taille?.nach_bund && eingabe.bundTyp === null) fehler.bund_typ = "Bitte den Bund-Typ wählen.";
   }
 

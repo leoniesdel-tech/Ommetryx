@@ -199,8 +199,11 @@ export function MessFormular({ vorgabe: v, kategorien, shops, fehler = {}, knopf
         </label>
       </div>
 
-      <h2>Maße je Größe</h2>
-      <p className="erklaerung">Flach messen, Knöpfe und Reißverschlüsse geschlossen, nicht dehnen. Umfänge werden automatisch × 2 gerechnet.</p>
+      <h2>Größen und Handmaße</h2>
+      <p className="erklaerung">
+        Handmaße sind freiwillig, das Vermessungsprogramm misst anhand der Fotos. Für den Vergleich: flach messen, Knöpfe und Reißverschlüsse geschlossen, nicht dehnen. Umfänge werden
+        automatisch × 2 gerechnet.
+      </p>
       {fehler.groessen && <p className="fehler">{fehler.groessen}</p>}
 
       {zeilen.map((z, i) => (

@@ -43,6 +43,7 @@
     "@shopify/app-bridge-react": "^4.2.4",
     "@shopify/shopify-app-react-router": "^4.0.0",
     "@shopify/shopify-app-session-storage-prisma": "^11.0.0",
+    "archiver": "^7.0.1",
     "isbot": "^5.1.31",
     "otpauth": "^9.5.2",
     "prisma": "^6.16.3",
@@ -56,6 +57,7 @@
   "devDependencies": {
     "@shopify/api-codegen-preset": "^1.2.0",
     "@shopify/polaris-types": "^2.0.0",
+    "@types/archiver": "^6.0.3",
     "@types/eslint": "^9.6.1",
     "@types/node": "^22.18.8",
     "@types/qrcode": "^1.5.6",

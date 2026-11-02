@@ -301,6 +301,29 @@ form.mess-felder {
   border-radius: 8px;
 }
 
+.mess-code {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 14px;
+  background: var(--linen, #f6f4ef);
+  border-radius: 8px;
+}
+
+.mess-vergleich {
+  width: 100%;
+  margin: 8px 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.mess-vergleich th,
+.mess-vergleich td {
+  padding: 4px 8px 4px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--linie, #d9d4cb);
+}
+
 .mess-liste {
   list-style: none;
   margin: 0;

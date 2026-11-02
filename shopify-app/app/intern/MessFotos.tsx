@@ -3,11 +3,51 @@
 import { useState } from "react";
 import { Form, useNavigation } from "react-router";
 import { MAX_FOTO_MB } from "./messbuch";
+import type { Vergleich } from "./programm";
 
 export interface FotoGroesse {
   id: number;
   groesse: string;
   foto: { version: string; breite: number; hoehe: number; kamera: string | null; mb: string } | null;
+  programm: { version: string | null; am: string; vergleich: Vergleich[] } | null;
+}
+
+const cm = (wert: number) => String(wert).replace(".", ",");
+
+function ProgrammMasse({ programm }: { programm: NonNullable<FotoGroesse["programm"]> }) {
+  return (
+    <>
+      <table className="mess-vergleich">
+        <caption className="erklaerung" style={{ textAlign: "left" }}>
+          Vom Programm gemessen, in cm{programm.version ? ` (Version ${programm.version})` : ""}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Maß</th>
+            <th scope="col">Programm</th>
+            <th scope="col">Hand</th>
+            <th scope="col">Abweichung</th>
+          </tr>
+        </thead>
+        <tbody>
+          {programm.vergleich.map((v) => (
+            <tr key={v.feld}>
+              <th scope="row" style={{ fontWeight: 400 }}>
+                {v.beschriftung}
+                {v.umfang ? " (Umfang)" : ""}
+              </th>
+              <td>{cm(v.programm)}</td>
+              <td>{v.hand === null ? "–" : cm(v.hand)}</td>
+              <td className={v.auffaellig ? "fehler" : undefined}>
+                {v.differenz === null ? "–" : `${v.differenz > 0 ? "+" : ""}${cm(v.differenz)}`}
+                {v.auffaellig ? " (zu viel)" : ""}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
 }
 
 function FotoKarte({ g }: { g: FotoGroesse }) {
@@ -27,6 +67,8 @@ function FotoKarte({ g }: { g: FotoGroesse }) {
           </p>
         </>
       )}
+
+      {g.programm && <ProgrammMasse programm={g.programm} />}
 
       {/* key: Nach dem Hochladen ist das Dateifeld wieder leer. */}
       <Form
@@ -80,7 +122,7 @@ function FotoKarte({ g }: { g: FotoGroesse }) {
 export function MessFotos({ groessen, fehler }: { groessen: FotoGroesse[]; fehler?: string }) {
   return (
     <section aria-labelledby="fotos-titel">
-      <h2 id="fotos-titel">Fotos</h2>
+      <h2 id="fotos-titel">Fotos und Programm-Maße</h2>
       <div className="karte">
         <ul className="erklaerung" style={{ margin: 0, paddingLeft: 20 }}>
           <li>Ein Foto je Größe, von vorne. Handy gerade von oben halten, parallel zum Boden.</li>

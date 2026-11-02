@@ -13,6 +13,7 @@ import type { FotoGroesse } from "../intern/MessFotos";
 import { pruefeFoto } from "../intern/fotodatei.server";
 import { MAX_FOTO_MB, pruefeMessArtikel } from "../intern/messbuch";
 import { ladeMessArtikel, ladeMessListe, loescheMessArtikel, loescheMessFoto, speichereMessArtikel, speichereMessFoto } from "../intern/messbuch.server";
+import { vergleiche } from "../intern/programm";
 import { pruefeHerkunft, verlangeTeam } from "../intern/team.server";
 
 const FOTO_FEHLER = {
@@ -56,7 +57,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     })),
   };
 
-  const masse = (g: (typeof a.groessen)[number]): Masse =>
+  const masse = (g: Record<Massfeld, number | null>): Masse =>
     Object.fromEntries(MASSFELDER.flatMap(({ feld }) => (g[feld] === null ? [] : [[feld as Massfeld, g[feld]]])));
 
   const fotos: FotoGroesse[] = a.groessen.map((g) => ({
@@ -69,14 +70,22 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       kamera: g.foto.kamera,
       mb: (g.foto.bytes / (1024 * 1024)).toFixed(1).replace(".", ","),
     },
+    programm: g.programm && {
+      version: g.programm.programmVersion,
+      am: g.programm.importiertAm.toISOString(),
+      vergleich: vergleiche(masse(g.programm), masse(g)),
+    },
   }));
+
+  const mitHandmass = a.groessen.filter((g) => Object.keys(masse(g)).length > 0);
+  const mitProgramm = a.groessen.flatMap((g) => (g.programm ? [{ groesse: g.groesse, masse: masse(g.programm) }] : []));
 
   return {
     id: a.id,
     vorgabe,
     fotos,
-    gemessen: a.groessen.map((g) => ({ groesse: g.groesse, von: g.gemessenVon?.name ?? "unbekannt", am: g.gemessenAm.toISOString() })),
-    hinweise: wachstumsHinweise(a.groessen.map((g) => ({ groesse: g.groesse, masse: masse(g) }))),
+    gemessen: mitHandmass.map((g) => ({ groesse: g.groesse, von: g.gemessenVon?.name ?? "unbekannt", am: g.gemessenAm.toISOString() })),
+    hinweise: [...wachstumsHinweise(mitHandmass.map((g) => ({ groesse: g.groesse, masse: masse(g) }))), ...wachstumsHinweise(mitProgramm).map((h) => `Programm-Maße, ${h}`)],
     kategorien: k.artikelarten.map((name) => ({ name, text: k.artikelart(name).name })),
     shops: liste.optionen.shops,
   };

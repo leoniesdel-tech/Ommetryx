@@ -9,7 +9,17 @@ import { standardKonfiguration } from "@ommetryx/empfehlung";
 import type { GeprueftesFoto } from "../app/intern/fotodatei.server";
 import { pruefeMessArtikel } from "../app/intern/messbuch";
 import type { MessDaten } from "../app/intern/messbuch";
-import { ladeMessArtikel, ladeMessFoto, ladeMessListe, loescheMessArtikel, loescheMessFoto, speichereMessArtikel, speichereMessFoto } from "../app/intern/messbuch.server";
+import { baueExport, messbuchZip } from "../app/intern/messbuch-export.server";
+import {
+  ladeMessArtikel,
+  ladeMessFoto,
+  ladeMessListe,
+  loescheMessArtikel,
+  loescheMessFoto,
+  speichereMessArtikel,
+  speichereMessFoto,
+  speichereProgrammErgebnisse,
+} from "../app/intern/messbuch.server";
 
 const db = new PrismaClient();
 const k = standardKonfiguration();
@@ -201,6 +211,61 @@ describe("Fotos", () => {
     await teilMitFoto("Foto-Liste");
     const { artikel } = await ladeMessListe({ suche: "Foto-Liste" });
     expect(artikel[0]!.groessen.map((g) => Boolean(g.foto))).toEqual([true, false]);
+  });
+});
+
+describe("Vermessungsprogramm", () => {
+  const ohneMasse = (name: string) => daten({ online_shop: "Messbuch-Testshop-Programm", produktname: name }, [["38", ""], ["40", ""]]);
+
+  it("speichert ein Teil ohne Handmaße, niemand gilt als Messerin", async () => {
+    const id = await speichereMessArtikel(null, ohneMasse("Ohne Maße"), teamA);
+    const a = (await ladeMessArtikel(id))!;
+    expect(a.groessen.map((g) => [g.brust, g.gemessenVon])).toEqual([[null, null], [null, null]]);
+  });
+
+  it("Programm-Maße ändern keine Handmaße, ein neuer Lauf ersetzt den alten", async () => {
+    const id = await speichereMessArtikel(null, daten({ online_shop: "Messbuch-Testshop-Programm", produktname: "Vergleich" }), teamA);
+    const g = (await ladeMessArtikel(id))!.groessen[0]!;
+    await speichereProgrammErgebnisse([{ groesseId: g.id, masse: { brust: 101, schulter: 40 } }], "v1");
+    await speichereProgrammErgebnisse([{ groesseId: g.id, masse: { brust: 102 } }], "v2");
+    const neu = (await ladeMessArtikel(id))!.groessen[0]!;
+    expect(neu.brust).toBe(100);
+    expect(neu.programm).toMatchObject({ brust: 102, schulter: null, programmVersion: "v2" });
+  });
+
+  it("meldet unbekannte Größen, übernimmt die anderen", async () => {
+    const id = await speichereMessArtikel(null, ohneMasse("Unbekannt"), teamA);
+    const g = (await ladeMessArtikel(id))!.groessen[0]!;
+    const r = await speichereProgrammErgebnisse([{ groesseId: g.id, masse: { brust: 100 } }, { groesseId: 999999999, masse: { brust: 100 } }], null);
+    expect(r).toEqual({ gespeichert: 1, unbekannt: [999999999] });
+  });
+
+  it("der Export nennt weder Produkt noch Shop, nur offene Fotos auf Wunsch", async () => {
+    const id = await speichereMessArtikel(null, daten({ online_shop: "Messbuch-Testshop-Programm", produktname: "Geheimes Exportkleid", marke: "Geheime Marke" }), teamA);
+    const [g1, g2] = (await ladeMessArtikel(id))!.groessen;
+    await speichereMessFoto(id, g1!.id, testFoto());
+    await speichereMessFoto(id, g2!.id, testFoto());
+    await speichereProgrammErgebnisse([{ groesseId: g1!.id, masse: { brust: 100 } }], null);
+
+    const teile = await db.messArtikel.findMany({ where: { id }, include: { groessen: { orderBy: { reihenfolge: "asc" }, include: { foto: true, programm: { select: { id: true } } } } } });
+    const alles = baueExport(teile, {});
+    expect(JSON.stringify(alles.daten)).not.toMatch(/Geheim|Messbuch-Testshop|Erfunden A/);
+    expect(alles.fotos.map((f) => f.name)).toEqual([`fotos/${g1!.id}.jpg`, `fotos/${g2!.id}.jpg`]);
+    expect(alles.daten.teile[0]!.groessen[0]).toMatchObject({ groesse_id: g1!.id, handy: "Erfundenes Handy", gemessen_von: teamA, garment_measurements: { brust: 100 } });
+
+    const offen = baueExport(teile, { offen: true });
+    expect(offen.fotos.map((f) => f.name)).toEqual([`fotos/${g2!.id}.jpg`]);
+    expect(offen.daten.teile[0]!.groessen).toHaveLength(1);
+  });
+
+  it("die ZIP-Datei enthält daten.json und die Fotos", async () => {
+    const id = await speichereMessArtikel(null, daten({ online_shop: "Messbuch-Testshop-Programm", produktname: "Zip" }), teamA);
+    const g = (await ladeMessArtikel(id))!.groessen[0]!;
+    await speichereMessFoto(id, g.id, testFoto());
+    const inhalt = Buffer.from(await new Response(await messbuchZip({ offen: true })).arrayBuffer());
+    expect(inhalt.subarray(0, 2).toString("latin1")).toBe("PK");
+    expect(inhalt.includes("daten.json")).toBe(true);
+    expect(inhalt.includes(`fotos/${g.id}.jpg`)).toBe(true);
   });
 });
 

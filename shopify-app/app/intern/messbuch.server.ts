@@ -7,19 +7,23 @@ import type { Masse } from "./erfassung";
 import { legeFotoAb, loescheFotos } from "./fotoablage.server";
 import type { GeprueftesFoto } from "./fotodatei.server";
 import type { MessDaten } from "./messbuch";
+import type { ProgrammZeile } from "./programm";
 
 export interface MessFilter {
   suche?: string | null;
   kategorie?: string | null;
   shop?: string | null;
   groesse?: string | null;
+  /** Nur Teile, bei denen ein Foto auf das Programm wartet. */
+  offen?: boolean;
 }
 
 const JE_SEITE = 200;
 
-function bedingung(f: MessFilter): Prisma.MessArtikelWhereInput {
+export function bedingung(f: MessFilter): Prisma.MessArtikelWhereInput {
   const suche = f.suche?.trim();
   return {
+    ...(f.offen ? { AND: [{ groessen: { some: { foto: { isNot: null }, programm: { is: null } } } }] } : {}),
     ...(f.kategorie ? { kategorie: f.kategorie } : {}),
     ...(f.shop ? { onlineShop: f.shop } : {}),
     ...(f.groesse ? { groessen: { some: { groesse: f.groesse } } } : {}),
@@ -41,7 +45,7 @@ export async function ladeMessListe(filter: MessFilter) {
       where: bedingung(filter),
       orderBy: { geaendertAm: "desc" },
       take: JE_SEITE,
-      include: { groessen: { orderBy: { reihenfolge: "asc" }, select: { groesse: true, foto: { select: { id: true } } } } },
+      include: { groessen: { orderBy: { reihenfolge: "asc" }, select: { groesse: true, foto: { select: { id: true } }, programm: { select: { id: true } } } } },
     }),
     db.messArtikel.count({ where: bedingung(filter) }),
     db.messArtikel.findMany({ distinct: ["onlineShop"], select: { onlineShop: true }, orderBy: { onlineShop: "asc" } }),
@@ -59,7 +63,7 @@ export function ladeMessArtikel(id: number) {
   return db.messArtikel.findUnique({
     where: { id },
     include: {
-      groessen: { orderBy: { reihenfolge: "asc" }, include: { gemessenVon: { select: { name: true } }, foto: true } },
+      groessen: { orderBy: { reihenfolge: "asc" }, include: { gemessenVon: { select: { name: true } }, foto: true, programm: true } },
     },
   });
 }
@@ -67,6 +71,9 @@ export function ladeMessArtikel(id: number) {
 const masseSpalten = (masse: Masse) => Object.fromEntries(MASSFELDER.map(({ feld }) => [feld, masse[feld] ?? null]));
 
 const gleicheMasse = (alt: Record<string, unknown>, masse: Masse) => MASSFELDER.every(({ feld }) => (alt[feld] ?? null) === (masse[feld] ?? null));
+
+/** Wer gemessen hat, zählt nur, wenn es Handmaße gibt. */
+const messerin = (masse: Masse, teamId: number) => (Object.keys(masse).length > 0 ? teamId : null);
 
 /**
  * Neu anlegen (id null) oder ändern. Größen bleiben als Einträge bestehen, damit später Fotos daran hängen können.
@@ -107,10 +114,10 @@ export async function speichereMessArtikel(id: number | null, d: MessDaten, team
         const geaendert = !gleicheMasse(alt, g.masse);
         await tx.messGroesse.update({
           where: { id: alt.id },
-          data: { reihenfolge: g.reihenfolge, ...masseSpalten(g.masse), ...(geaendert ? { gemessenVonId: teamId, gemessenAm: new Date() } : {}) },
+          data: { reihenfolge: g.reihenfolge, ...masseSpalten(g.masse), ...(geaendert ? { gemessenVonId: messerin(g.masse, teamId), gemessenAm: new Date() } : {}) },
         });
       } else {
-        await tx.messGroesse.create({ data: { artikelId: eintrag.id, groesse: g.groesse, reihenfolge: g.reihenfolge, gemessenVonId: teamId, ...masseSpalten(g.masse) } });
+        await tx.messGroesse.create({ data: { artikelId: eintrag.id, groesse: g.groesse, reihenfolge: g.reihenfolge, gemessenVonId: messerin(g.masse, teamId), ...masseSpalten(g.masse) } });
       }
     }
     return eintrag.id;
@@ -145,4 +152,18 @@ export async function loescheMessFoto(artikelId: number, groesseId: number) {
 
 export function ladeMessFoto(groesseId: number) {
   return db.messFoto.findUnique({ where: { groesseId } });
+}
+
+/** Trägt Ergebnisse des Vermessungsprogramms ein, ein neuer Lauf ersetzt den alten. Handmaße bleiben unberührt. */
+export async function speichereProgrammErgebnisse(zeilen: ProgrammZeile[], version: string | null) {
+  const vorhanden = await db.messGroesse.findMany({ where: { id: { in: zeilen.map((z) => z.groesseId) } }, select: { id: true } });
+  const bekannt = new Set(vorhanden.map((g) => g.id));
+  const gueltig = zeilen.filter((z) => bekannt.has(z.groesseId));
+  await db.$transaction(
+    gueltig.map(({ groesseId, masse }) => {
+      const felder = { ...masseSpalten(masse), programmVersion: version, importiertAm: new Date() };
+      return db.messProgrammMessung.upsert({ where: { groesseId }, create: { groesseId, ...felder }, update: felder });
+    }),
+  );
+  return { gespeichert: gueltig.length, unbekannt: zeilen.filter((z) => !bekannt.has(z.groesseId)).map((z) => z.groesseId) };
 }

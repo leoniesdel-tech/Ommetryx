@@ -34,9 +34,14 @@ export default function Messbuch() {
     <>
       <div className="mess-titel">
         <h1 style={{ margin: 0 }}>Messbuch</h1>
-        <Link className="knopf" to="/intern/messbuch/neu">
-          Neues Teil
-        </Link>
+        <div className="zeile" style={{ gap: 12, flexWrap: "wrap" }}>
+          <Link className="knopf knopf-zweit" to="/intern/messbuch/programm">
+            Vermessungsprogramm
+          </Link>
+          <Link className="knopf" to="/intern/messbuch/neu">
+            Neues Teil
+          </Link>
+        </div>
       </div>
 
       <Form method="get" className="karte mess-felder" onChange={(e) => (e.target as HTMLElement).tagName === "SELECT" && senden(e.currentTarget)}>
@@ -103,7 +108,9 @@ export default function Messbuch() {
                 <span className="erklaerung">
                   {kategorieName[a.kategorie] ?? a.kategorie} · {HERKUNFT[a.herkunft as Herkunft] ?? a.herkunft} · Größen: {a.groessen.map((g) => g.groesse).join(", ")}
                 </span>
-                <span className="erklaerung">{fotoStand(a.groessen.filter((g) => !g.foto).length)}</span>
+                <span className="erklaerung">
+                  {fotoStand(a.groessen.filter((g) => !g.foto).length)} · Vom Programm gemessen: {a.groessen.filter((g) => g.programm).length} von {a.groessen.length}
+                </span>
               </Link>
             </li>
           ))}

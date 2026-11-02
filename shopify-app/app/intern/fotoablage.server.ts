@@ -9,7 +9,7 @@ const NAME = /^[0-9a-f-]{36}\.(jpg|png)$/;
 
 const ordner = () => process.env.OX_FOTO_ORDNER ?? path.resolve("daten/messfotos");
 
-function pfad(name: string) {
+export function fotoPfad(name: string) {
   if (!NAME.test(name)) throw new Error("Ungültiger Dateiname");
   return path.join(ordner(), name);
 }
@@ -17,7 +17,7 @@ function pfad(name: string) {
 /** Speichert die Datei unter einem Zufallsnamen und gibt ihn zurück. */
 export async function legeFotoAb(daten: Buffer, endung: string): Promise<string> {
   const name = `${randomUUID()}.${endung}`;
-  const ziel = pfad(name);
+  const ziel = fotoPfad(name);
   await mkdir(ordner(), { recursive: true });
   await writeFile(`${ziel}.teil`, daten);
   await rename(`${ziel}.teil`, ziel);
@@ -25,9 +25,9 @@ export async function legeFotoAb(daten: Buffer, endung: string): Promise<string>
 }
 
 export function leseFoto(name: string): Promise<Buffer> {
-  return readFile(pfad(name));
+  return readFile(fotoPfad(name));
 }
 
 export async function loescheFotos(namen: string[]) {
-  await Promise.all(namen.map((name) => rm(pfad(name), { force: true })));
+  await Promise.all(namen.map((name) => rm(fotoPfad(name), { force: true })));
 }
