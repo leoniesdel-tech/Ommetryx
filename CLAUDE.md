@@ -372,3 +372,8 @@ Bis zur Klärung nicht raten.
 - **Offen vor dem Start (Leonie/Anwalt):** vollständiger AVV-Text fehlt – der Händler bestätigt „gelesen“, kann aber bisher nur die Kurzfassung lesen, deshalb darf kein echter Händler bestätigen, bevor der Volltext in der App steht. Außerdem TOMs, AGB, Impressum (Firma, Anschrift), Kontakt-E-Mail, Antwortzeit, Kostenregel Muster-Versand, Mindestzahl Termin vor Ort, Frist für Änderungen an Unterauftragsverarbeitern, Monitoring-Dienst.
 - Figma H04 weicht ab: Anfrage statt „Versandetikett erstellen“ (Leonie-Entscheidung 27.10.).
 - **Nächster Schritt:** Leonie probiert Etappe 9 aus und gibt die Du-Texte frei, dann Plan für die nächste Etappe (Webhooks, Managed Pricing, Rückmeldungen).
+
+**Etappe 10 Plan (2.11.):** 10a Pflicht-Webhooks, 24-Monats-Löschung, Aufräumen · 10b Rate-Limit, Vorlagen-Reste, Prüfungen · 10c Nutzungszähler ohne Kennung (Mindestgruppe 20) · 10d Abo-Seite (braucht Preise; Preise nur in USD). Nichts davon schaltet live.
+- **Entscheidung Leonie (2.11.):** Kleidungsmaße sollen die Deinstallation überdauern, um das System weiterzuentwickeln. Vorschlag: `shop/redact` löscht alles mit Shop-Bezug; die Maße bleiben ohne Shop, Produkt-ID, Titel und Varianten in einem eigenen Archiv (Artikelart, Schnitt, Material, Maße je Größe). Noch offen, ob sie das so will.
+- **Gilt nicht für:** Körpermaße/Rückmeldungen (nur mit Einwilligung 3) und Bestelldaten (Art. 28 Abs. 10, nie für eigene Zwecke).
+- **Anwaltsliste:** Dürfen die Maße nach `shop/redact` anonymisiert bleiben? Klausel dazu in die AGB.
