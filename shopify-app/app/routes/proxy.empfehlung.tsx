@@ -5,6 +5,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import { shopAktiv } from "../widget/aktiv.server";
+import { anfrageErlaubt } from "../widget/begrenzung.server";
 import { antwort, empfehlung } from "../widget/anfrage.server";
 
 export const loader = () => antwort({ fehler: "nur_post" }, 405);
@@ -14,6 +15,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (!session) return antwort({ fehler: "nicht_installiert" }, 404);
   if (!(await shopAktiv(session.shop))) return antwort({ fehler: "nicht_aktiv" }, 403);
   if (request.method !== "POST") return antwort({ fehler: "nur_post" }, 405);
+  if (!anfrageErlaubt(session.shop, request.headers.get("X-Forwarded-For"))) return antwort({ fehler: "zu_viele_anfragen" }, 429);
 
   let inhalt: unknown;
   try {

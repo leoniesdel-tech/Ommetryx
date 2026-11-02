@@ -386,3 +386,15 @@ Bis zur Klärung nicht raten.
 - Anwaltsliste ergänzt: Einwilligungsnachweise behalten nach `shop/redact` keinen Shop (Nachweis-Wert prüfen).
 - Echter Webhook von Shopify noch nicht empfangen: `shopify app deploy` ist nicht gelaufen (nichts live), getestet mit selbst signierten Anfragen. Shopify CLI 5.0 ist verfügbar, nicht ohne Prüfung aktualisieren.
 - **Nächster Schritt:** 10b (Rate-Limit, Vorlagen-Reste, Prüfungen).
+
+**Etappe 10b (2.11., Tests grün)**
+- `app/widget/begrenzung.server.ts`: Empfehlung max. 30/Min je Besucher, 1.200/Min je Shop (IP nur als Hash im Arbeitsspeicher, eine Minute; bei mehreren Server-Instanzen in die DB verlegen). Antwort 429.
+- `app/lib/sicherheit.ts`: `/intern` und `/mein` nicht einbettbar (frame-ancestors, X-Frame-Options), kein Referrer. Rechte nur noch `write_products,write_app_proxy`; Metaobjekte/Demo-Feld entfernt.
+- Öffentliche Startseite ohne Shop-Eingabefeld (Regel 2.3.1), `login` entfernt. Fußleiste scrollt ab Höhe < 500 px mit (WCAG 2.4.11).
+- Barrierefreiheit: axe mit lokaler Testseite (echtes Widget, gespielte Antworten) 0 Verstöße in 8 Ansichten, Gegenprobe ok; Fokus-Falle, Esc und Fokus zurück geprüft; 320 px ohne seitliches Scrollen; Du-Fassung sichtbar geprüft. Nach WCAG 2.4.11 nicht erneut gemessen. Echter Screenreader-Test fehlt.
+- Ladezeit: Lader 1,5 KB, Widget erst beim Klick. **Lighthouse nicht gemessen** (nur im echten Shop mit aktivem Button möglich).
+- `npm audit`: 6 Warnungen (Prisma-Werkzeuge, fs-routes), im Betrieb nicht von außen erreichbar; vor dem Start neu prüfen, Prisma 7 nicht ungeprüft.
+- **App-Store-Selbstprüfung 2.11.** (34 Anforderungen): 29 voraussichtlich ok, 4 offen, 1 voraussichtlich nicht erfüllt.
+  - **5.1.5 Kundendaten an den Händler zurückgeben: Konflikt mit Abschnitt 6/9** (Händler sieht keine Körpermaße). Muss vor der Einreichung mit Shopify Partner Support und Anwalt geklärt werden. Nicht eigenmächtig ändern.
+  - Offen: 1.2.1–1.2.3 Abrechnung (10d), 3.1.1 TLS (`application_url` noch example.com, erst mit Hosting prüfbar).
+- Noch nie mit echten Werten gelaufen: Block mit `ommetryx.aktiv`/`ommetryx.button` (AVV offen), Größenwechsel im echten Shop.

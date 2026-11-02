@@ -196,6 +196,8 @@ details.tipp p { margin: 4px 0 0; }
 
 /* Feste Fußleiste mit dem Hauptknopf (Figma E03–E06: „Weiter“ bleibt unten sichtbar) */
 .fuss { position: sticky; bottom: -24px; margin: 0 -20px -24px; padding: 12px 20px 24px; background: var(--linen); border-top: 1px solid var(--linie); }
+/* Bei wenig Höhe (Handy quer, starker Zoom) würde die Leiste den Fokus verdecken (WCAG 2.4.11): mitscrollen */
+@media (max-height: 500px) { .fuss { position: static; } }
 
 .karte-knopf { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; min-height: 56px; padding: 12px 16px;
   border: 1px solid var(--linie-stark); border-radius: 12px; background: #fff; color: var(--graphit); margin-bottom: 16px; }
