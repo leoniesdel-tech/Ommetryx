@@ -407,3 +407,5 @@ Bis zur Klärung nicht raten.
 - Startseite zeigt die letzten 30 Tage, Werte unter der Mindestgruppe 20 als „unter 20“. Mit echten Zahlen noch nicht im Admin gesehen.
 - Anwaltsliste: Zähler ohne Einwilligung bestätigen lassen.
 - **Nächster Schritt:** 10d Abo-Seite, braucht Preise (nur USD) und Zugang zur Partner-API. Parallel: 5.1.5 und Rolle von Ommetryx klären, Du-Texte gegenlesen.
+
+**10d zurückgestellt (2.11.):** Preise noch nicht validiert (Leonie). Abo-Seite erst bauen, wenn Pläne, Preise (USD) und Testphase feststehen. Keine Preise raten.
