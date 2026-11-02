@@ -43,9 +43,9 @@ export async function ladeMessListe(filter: MessFilter) {
   const [artikel, gesamt, shops, groessen, kategorien] = await Promise.all([
     db.messArtikel.findMany({
       where: bedingung(filter),
-      orderBy: { geaendertAm: "desc" },
+      orderBy: [{ kategorie: "asc" }, { onlineShop: "asc" }, { produktname: "asc" }],
       take: JE_SEITE,
-      include: { groessen: { orderBy: { reihenfolge: "asc" }, select: { groesse: true, foto: { select: { id: true } }, programm: { select: { id: true } } } } },
+      include: { groessen: { orderBy: { reihenfolge: "asc" }, include: { foto: { select: { id: true } }, programm: { select: { id: true } } } } },
     }),
     db.messArtikel.count({ where: bedingung(filter) }),
     db.messArtikel.findMany({ distinct: ["onlineShop"], select: { onlineShop: true }, orderBy: { onlineShop: "asc" } }),

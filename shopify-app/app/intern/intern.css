@@ -310,18 +310,64 @@ form.mess-felder {
   border-radius: 8px;
 }
 
-.mess-vergleich {
+.mess-gruppe h2 {
+  margin: 24px 0 4px;
+}
+
+.mess-gruppe h3 {
+  margin: 12px 0 8px;
+}
+
+.mess-angaben {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 16px;
+}
+
+.mess-angaben dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.mess-tabelle-huelle {
+  overflow-x: auto;
+}
+
+.mess-tabelle {
   width: 100%;
-  margin: 8px 0;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.mess-vergleich th,
-.mess-vergleich td {
-  padding: 4px 8px 4px 0;
+.mess-tabelle caption {
   text-align: left;
+  margin-bottom: 8px;
+}
+
+.mess-tabelle th,
+.mess-tabelle td {
+  padding: 8px 12px 8px 0;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
   border-bottom: 1px solid var(--linie, #d9d4cb);
+}
+
+.mess-tabelle tbody th {
+  font-weight: 600;
+}
+
+.mess-klein {
+  display: block;
+  font-size: 12px;
+}
+
+.mess-mini {
+  display: block;
+  width: 44px;
+  height: 58px;
+  object-fit: cover;
+  border-radius: 8px;
 }
 
 .mess-liste {

@@ -3,8 +3,9 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { Form, Link, useLoaderData, useSubmit } from "react-router";
 import db from "../db.server";
+import { masseAus } from "../intern/erfassung";
 import { konfiguration } from "../intern/erfassung.server";
-import { HERKUNFT } from "../intern/messbuch";
+import { gliedere, HERKUNFT, teilStand } from "../intern/messbuch";
 import type { Herkunft } from "../intern/messbuch";
 import { ladeMessListe } from "../intern/messbuch.server";
 import { verlangeTeam } from "../intern/team.server";
@@ -20,10 +21,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
   const [liste, k] = await Promise.all([ladeMessListe(filter), konfiguration()]);
   const kategorieName = Object.fromEntries(k.artikelarten.map((name) => [name, k.artikelart(name).name]));
-  return { ...liste, filter, kategorieName };
+  const artikel = liste.artikel.map((a) => ({
+    id: a.id,
+    produktname: a.produktname,
+    marke: a.marke,
+    onlineShop: a.onlineShop,
+    kategorie: a.kategorie,
+    herkunft: a.herkunft,
+    groessen: a.groessen.map((g) => g.groesse),
+    stand: teilStand(a.groessen.map((g) => ({ foto: Boolean(g.foto), programm: Boolean(g.programm), hand: Object.keys(masseAus(g)).length > 0 }))),
+  }));
+  return { artikel, gesamt: liste.gesamt, optionen: liste.optionen, filter, kategorieName };
 };
-
-const fotoStand = (fehlen: number) => (fehlen === 0 ? "Alle Fotos da" : fehlen === 1 ? "1 Foto fehlt" : `${fehlen} Fotos fehlen`);
 
 export default function Messbuch() {
   const { artikel, gesamt, optionen, filter, kategorieName } = useLoaderData<typeof loader>();
@@ -89,7 +98,7 @@ export default function Messbuch() {
 
       <p className="erklaerung" role="status">
         {gesamt === 1 ? "1 Teil" : `${gesamt} Teile`}
-        {gesamt > artikel.length ? `, die neuesten ${artikel.length} werden angezeigt` : ""}
+        {gesamt > artikel.length ? `, die ersten ${artikel.length} werden angezeigt. Bitte mit den Filtern eingrenzen.` : ""}
       </p>
 
       {artikel.length === 0 ? (
@@ -97,24 +106,31 @@ export default function Messbuch() {
           {gefiltert ? "Kein Teil passt zu diesen Filtern." : "Noch keine Teile. Legt mit „Neues Teil“ das erste an."}
         </p>
       ) : (
-        <ul className="mess-liste">
-          {artikel.map((a) => (
-            <li key={a.id}>
-              <Link to={`/intern/messbuch/${a.id}`} className="karte mess-eintrag">
-                <strong>{a.produktname}</strong>
-                <span>
-                  {[a.marke, a.onlineShop].filter(Boolean).join(" · ")}
-                </span>
-                <span className="erklaerung">
-                  {kategorieName[a.kategorie] ?? a.kategorie} · {HERKUNFT[a.herkunft as Herkunft] ?? a.herkunft} · Größen: {a.groessen.map((g) => g.groesse).join(", ")}
-                </span>
-                <span className="erklaerung">
-                  {fotoStand(a.groessen.filter((g) => !g.foto).length)} · Vom Programm gemessen: {a.groessen.filter((g) => g.programm).length} von {a.groessen.length}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        gliedere(artikel, kategorieName).map(({ kategorie, shops }) => (
+          <section key={kategorie} className="mess-gruppe">
+            <h2>{kategorie}</h2>
+            {shops.map(({ shop, teile }) => (
+              <div key={shop}>
+                <h3>
+                  {shop} <span className="erklaerung">({teile.length})</span>
+                </h3>
+                <ul className="mess-liste">
+                  {teile.map((a) => (
+                    <li key={a.id}>
+                      <Link to={`/intern/messbuch/${a.id}`} className="karte mess-eintrag">
+                        <strong>{a.produktname}</strong>
+                        <span className="erklaerung">
+                          {[a.marke, HERKUNFT[a.herkunft as Herkunft] ?? a.herkunft, `Größen: ${a.groessen.join(", ")}`].filter(Boolean).join(" · ")}
+                        </span>
+                        <span className="erklaerung">{a.stand}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </section>
+        ))
       )}
     </>
   );

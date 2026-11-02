@@ -1,19 +1,19 @@
-// /intern/messbuch/:id – Teil ansehen und bearbeiten.
+// /intern/messbuch/:id – Übersicht eines Teils, mit ?bearbeiten=1 das Formular.
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, Link, redirect, useActionData, useLoaderData, useSearchParams } from "react-router";
 import db from "../db.server";
-import { MASSFELDER, wachstumsHinweise } from "../intern/erfassung";
-import type { Masse, Massfeld } from "../intern/erfassung";
+import { MASSFELDER, masseAus, wachstumsHinweise } from "../intern/erfassung";
 import { konfiguration } from "../intern/erfassung.server";
+import { MassTabelle } from "../intern/MassTabelle";
+import type { TabellenGroesse } from "../intern/MassTabelle";
 import { MessFormular } from "../intern/MessFormular";
 import type { MessVorgabe } from "../intern/MessFormular";
 import { MessFotos } from "../intern/MessFotos";
-import type { FotoGroesse } from "../intern/MessFotos";
 import { pruefeFoto } from "../intern/fotodatei.server";
-import { MAX_FOTO_MB, pruefeMessArtikel } from "../intern/messbuch";
+import { groesseStand, HERKUNFT, MAX_FOTO_MB, pruefeMessArtikel } from "../intern/messbuch";
+import type { Herkunft } from "../intern/messbuch";
 import { ladeMessArtikel, ladeMessListe, loescheMessArtikel, loescheMessFoto, speichereMessArtikel, speichereMessFoto } from "../intern/messbuch.server";
-import { vergleiche } from "../intern/programm";
 import { pruefeHerkunft, verlangeTeam } from "../intern/team.server";
 
 const FOTO_FEHLER = {
@@ -21,6 +21,8 @@ const FOTO_FEHLER = {
   kaputt: "Diese Bilddatei lässt sich nicht lesen. Bitte das Foto neu aufnehmen oder erneut hochladen.",
   zu_gross: `Das Foto ist größer als ${MAX_FOTO_MB} MB.`,
 };
+
+const SCHNITT_TEXT: Record<string, string> = { koerpernah: "körpernah", regulaer: "regulär", locker: "locker", oversized: "oversized" };
 
 const komma = (wert: number | null | undefined) => (wert === null || wert === undefined ? "" : String(wert).replace(".", ","));
 
@@ -57,35 +59,39 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     })),
   };
 
-  const masse = (g: Record<Massfeld, number | null>): Masse =>
-    Object.fromEntries(MASSFELDER.flatMap(({ feld }) => (g[feld] === null ? [] : [[feld as Massfeld, g[feld]]])));
+  const groessen: TabellenGroesse[] = a.groessen.map((g) => {
+    const hand = masseAus(g);
+    const programm = g.programm ? masseAus(g.programm) : {};
+    return {
+      id: g.id,
+      groesse: g.groesse,
+      hand,
+      programm,
+      stand: groesseStand({ foto: Boolean(g.foto), programm: Boolean(g.programm), hand: Object.keys(hand).length > 0 }),
+      foto: g.foto && {
+        version: String(g.foto.hochgeladenAm.getTime()),
+        breite: g.foto.breite,
+        hoehe: g.foto.hoehe,
+        kamera: g.foto.kamera,
+        mb: (g.foto.bytes / (1024 * 1024)).toFixed(1).replace(".", ","),
+      },
+    };
+  });
 
-  const fotos: FotoGroesse[] = a.groessen.map((g) => ({
-    id: g.id,
-    groesse: g.groesse,
-    foto: g.foto && {
-      version: String(g.foto.hochgeladenAm.getTime()),
-      breite: g.foto.breite,
-      hoehe: g.foto.hoehe,
-      kamera: g.foto.kamera,
-      mb: (g.foto.bytes / (1024 * 1024)).toFixed(1).replace(".", ","),
-    },
-    programm: g.programm && {
-      version: g.programm.programmVersion,
-      am: g.programm.importiertAm.toISOString(),
-      vergleich: vergleiche(masse(g.programm), masse(g)),
-    },
-  }));
-
-  const mitHandmass = a.groessen.filter((g) => Object.keys(masse(g)).length > 0);
-  const mitProgramm = a.groessen.flatMap((g) => (g.programm ? [{ groesse: g.groesse, masse: masse(g.programm) }] : []));
+  const mitHandmass = a.groessen.filter((g) => Object.keys(masseAus(g)).length > 0);
+  const mitProgramm = groessen.filter((g) => Object.keys(g.programm).length > 0);
 
   return {
     id: a.id,
     vorgabe,
-    fotos,
+    groessen,
+    kategorieText: k.artikelarten.includes(a.kategorie) ? k.artikelart(a.kategorie).name : a.kategorie,
+    programmVersion: a.groessen.find((g) => g.programm?.programmVersion)?.programm?.programmVersion ?? null,
     gemessen: mitHandmass.map((g) => ({ groesse: g.groesse, von: g.gemessenVon?.name ?? "unbekannt", am: g.gemessenAm.toISOString() })),
-    hinweise: [...wachstumsHinweise(mitHandmass.map((g) => ({ groesse: g.groesse, masse: masse(g) }))), ...wachstumsHinweise(mitProgramm).map((h) => `Programm-Maße, ${h}`)],
+    hinweise: [
+      ...wachstumsHinweise(mitHandmass.map((g) => ({ groesse: g.groesse, masse: masseAus(g) }))),
+      ...wachstumsHinweise(mitProgramm.map((g) => ({ groesse: g.groesse, masse: g.programm }))).map((h) => `Programm-Maße, ${h}`),
+    ],
     kategorien: k.artikelarten.map((name) => ({ name, text: k.artikelart(name).name })),
     shops: liste.optionen.shops,
   };
@@ -126,21 +132,64 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   return redirect(`/intern/messbuch/${id}?gespeichert=1`);
 };
 
-export default function TeilBearbeiten() {
+export default function TeilSeite() {
   const daten = useLoaderData<typeof loader>();
   const antwort = useActionData<typeof action>();
   const [params] = useSearchParams();
   const fehler = antwort && "fehler" in antwort ? antwort.fehler : undefined;
   const fotoFehler = antwort && "fotoFehler" in antwort ? antwort.fotoFehler : undefined;
+  const v = daten.vorgabe;
+
+  if (params.get("bearbeiten")) {
+    return (
+      <>
+        <p>
+          <Link to={`/intern/messbuch/${daten.id}`}>← Zurück zur Übersicht</Link>
+        </p>
+        <h1>{v.produktname} bearbeiten</h1>
+
+        {/* key: Nach dem Speichern zeigt das Formular den neuen Stand. */}
+        <MessFormular key={JSON.stringify(v)} vorgabe={v} kategorien={daten.kategorien} shops={daten.shops} fehler={fehler} knopf="Änderungen speichern" />
+
+        <Form
+          method="post"
+          onSubmit={(e) => {
+            if (!window.confirm("Dieses Teil mit allen Größen und Fotos endgültig löschen?")) e.preventDefault();
+          }}
+        >
+          <input type="hidden" name="absicht" value="loeschen" />
+          <button className="knopf knopf-zweit" type="submit">
+            Teil löschen
+          </button>
+        </Form>
+      </>
+    );
+  }
+
+  const angaben: [string, string][] = [
+    ["Shop", v.onlineShop],
+    ["Marke", v.marke],
+    ["Kategorie", daten.kategorieText],
+    ["Schnitt", SCHNITT_TEXT[v.schnitt] ?? v.schnitt],
+    ["Material", v.material],
+    ["Herkunft", HERKUNFT[v.herkunft as Herkunft] ?? v.herkunft],
+    ["Querdehnung", v.dehnung && `${v.dehnung} %`],
+    ["Programm-Version", daten.programmVersion ?? ""],
+  ];
 
   return (
     <>
       <p>
         <Link to="/intern/messbuch">← Messbuch</Link>
       </p>
-      <h1>{daten.vorgabe.produktname}</h1>
+      <div className="mess-titel">
+        <h1 style={{ margin: 0 }}>{v.produktname}</h1>
+        <Link className="knopf knopf-zweit" to="?bearbeiten=1">
+          Bearbeiten
+        </Link>
+      </div>
 
-      {params.get("gespeichert") && !fehler && (
+      {params.get("gespeichert") && (
         <p className="meldung meldung-ok" role="status">
           Gespeichert.
         </p>
@@ -160,26 +209,37 @@ export default function TeilBearbeiten() {
         </div>
       )}
 
-      <p className="erklaerung">
-        {daten.gemessen.map((g) => `${g.groesse}: ${g.von}, ${new Date(g.am).toLocaleDateString("de-DE")}`).join(" · ")}
-      </p>
+      <dl className="karte mess-angaben">
+        {angaben
+          .filter(([, wert]) => wert)
+          .map(([name, wert]) => (
+            <div key={name}>
+              <dt className="erklaerung">{name}</dt>
+              <dd>{wert}</dd>
+            </div>
+          ))}
+        {v.link && (
+          <div>
+            <dt className="erklaerung">Link</dt>
+            <dd>
+              <a href={v.link} target="_blank" rel="noreferrer">
+                Produktseite öffnen
+              </a>
+            </dd>
+          </div>
+        )}
+      </dl>
+      {v.notiz && <p className="karte">{v.notiz}</p>}
 
-      {/* key: Nach dem Speichern zeigt das Formular den neuen Stand. */}
-      <MessFormular key={JSON.stringify(daten.vorgabe)} vorgabe={daten.vorgabe} kategorien={daten.kategorien} shops={daten.shops} fehler={fehler} knopf="Änderungen speichern" />
+      <MassTabelle groessen={daten.groessen} />
 
-      <MessFotos groessen={daten.fotos} fehler={fotoFehler} />
+      {daten.gemessen.length > 0 && (
+        <p className="erklaerung">
+          Handmessung: {daten.gemessen.map((g) => `${g.groesse}: ${g.von}, ${new Date(g.am).toLocaleDateString("de-DE")}`).join(" · ")}
+        </p>
+      )}
 
-      <Form
-        method="post"
-        onSubmit={(e) => {
-          if (!window.confirm("Dieses Teil mit allen Größen endgültig löschen?")) e.preventDefault();
-        }}
-      >
-        <input type="hidden" name="absicht" value="loeschen" />
-        <button className="knopf knopf-zweit" type="submit">
-          Teil löschen
-        </button>
-      </Form>
+      <MessFotos groessen={daten.groessen} fehler={fotoFehler} />
     </>
   );
 }

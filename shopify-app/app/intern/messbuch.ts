@@ -11,6 +11,38 @@ export type Herkunft = keyof typeof HERKUNFT;
 
 export const MAX_FOTO_MB = 25;
 
+export interface GroessenStand {
+  foto: boolean;
+  programm: boolean;
+  hand: boolean;
+}
+
+export function groesseStand({ foto, programm, hand }: GroessenStand): string {
+  if (programm) return "Gemessen";
+  if (hand) return "Von Hand gemessen";
+  return foto ? "Wartet aufs Programm" : "Foto fehlt";
+}
+
+export function teilStand(groessen: GroessenStand[]): string {
+  const offen = groessen.filter((g) => !g.programm && !g.hand);
+  if (offen.length === 0) return "Alle Größen gemessen";
+  const wartet = offen.filter((g) => g.foto).length;
+  const fehlt = offen.length - wartet;
+  return [fehlt > 0 && (fehlt === 1 ? "1 Foto fehlt" : `${fehlt} Fotos fehlen`), wartet > 0 && (wartet === 1 ? "1 wartet aufs Programm" : `${wartet} warten aufs Programm`)]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** Gliedert Teile nach Kategorie, darin nach Shop, beides alphabetisch. */
+export function gliedere<T extends { kategorie: string; onlineShop: string }>(teile: T[], kategorieName: Record<string, string>) {
+  const sortiert = (namen: Iterable<string>) => [...new Set(namen)].sort((a, b) => a.localeCompare(b, "de"));
+  const name = (k: string) => kategorieName[k] ?? k;
+  return sortiert(teile.map((t) => name(t.kategorie))).map((kategorie) => {
+    const hier = teile.filter((t) => name(t.kategorie) === kategorie);
+    return { kategorie, shops: sortiert(hier.map((t) => t.onlineShop)).map((shop) => ({ shop, teile: hier.filter((t) => t.onlineShop === shop) })) };
+  });
+}
+
 export interface MessDaten {
   herkunft: Herkunft;
   onlineShop: string;

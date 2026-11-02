@@ -58,22 +58,24 @@ export function pruefeProgrammDatei(text: string): ProgrammPruefung {
   return { ok: true, version: datei.data.programm_version ?? null, zeilen, fehler };
 }
 
-export interface Vergleich {
-  feld: Massfeld;
-  beschriftung: string;
-  umfang: boolean;
-  programm: number;
+export interface MassZelle {
+  programm: number | null;
   hand: number | null;
   differenz: number | null;
   auffaellig: boolean;
 }
 
-export function vergleiche(programm: Masse, hand: Masse): Vergleich[] {
-  return MASSFELDER.flatMap(({ feld, beschriftung, umfang }) => {
-    const p = programm[feld];
-    if (p === undefined) return [];
-    const h = hand[feld] ?? null;
-    const differenz = h === null ? null : Math.round((p - h) * 10) / 10;
-    return [{ feld, beschriftung, umfang, programm: p, hand: h, differenz, auffaellig: umfang && differenz !== null && Math.abs(differenz) > TOLERANZ_UMFANG_CM }];
-  });
+/** Maßtabelle eines Teils: je Größe eine Zeile, nur Maße mit mindestens einem Wert als Spalten. */
+export function massTabelle<G extends { hand: Masse; programm: Masse }>(groessen: G[]) {
+  const spalten = MASSFELDER.filter(({ feld }) => groessen.some((g) => g.programm[feld] !== undefined || g.hand[feld] !== undefined));
+  const zeilen = groessen.map((g) => ({
+    groesse: g,
+    zellen: spalten.map(({ feld, umfang }): MassZelle => {
+      const programm = g.programm[feld] ?? null;
+      const hand = g.hand[feld] ?? null;
+      const differenz = programm === null || hand === null ? null : Math.round((programm - hand) * 10) / 10;
+      return { programm, hand, differenz, auffaellig: umfang && differenz !== null && Math.abs(differenz) > TOLERANZ_UMFANG_CM };
+    }),
+  }));
+  return { spalten, zeilen };
 }

@@ -37,7 +37,12 @@ export const PLAUSIBEL: Record<Massfeld, [number, number]> = {
   gesamtlaenge: [20, 200],
 };
 
-export const BUND_TYPEN: BundTyp[] = ["fest", "stretch", "gummizug"];
+/** Nimmt die vorhandenen Maße aus einer Datenbank-Zeile. */
+export function masseAus(zeile: Record<Massfeld, number | null>): Masse {
+  return Object.fromEntries(MASSFELDER.flatMap(({ feld }) => (zeile[feld] === null ? [] : [[feld, zeile[feld]]])));
+}
+
+export const BUND_TYPEN: BundTyp[] =["fest", "stretch", "gummizug"];
 export const AERMEL_TYPEN: AermelTyp[] = ["eingesetzt", "ueberschnitten", "ohne"];
 export const SCHNITT_QUELLEN = ["manuell", "automatisch", "haendler"] as const;
 
