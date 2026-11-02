@@ -194,6 +194,27 @@ model Shop {
   @@schema("app")
 }
 
+/// Kleidungsmaße ohne Bezug zum Shop: bleiben nach shop/redact für die Weiterentwicklung erhalten.
+/// Keine Shop-Adresse, keine Shopify-IDs, kein Produktname. Noch anwaltlich zu prüfen (CLAUDE.md, Etappe 10).
+model KleidungsArchiv {
+  id                      Int      @id @default(autoincrement())
+  artikelart              String
+  schnitt                 String
+  materialDehnungProzent  Float    @map("material_dehnung_prozent")
+  materialZusammensetzung String?  @map("material_zusammensetzung")
+  tailliert               Boolean
+  bundTyp                 String?  @map("bund_typ")
+  aermelTyp               String?  @map("aermel_typ")
+  messhoeheBrustCm        Float    @map("messhoehe_brust_cm")
+  /// Größenname und Umfänge in cm, Reihenfolge klein → groß
+  groessen                Json
+  /// Nur der Monat, damit sich kein Eintrag einer Deinstallation zuordnen lässt
+  archiviertImMonat       DateTime @map("archiviert_im_monat")
+
+  @@map("kleidungs_archiv")
+  @@schema("app")
+}
+
 /// Muster-Versand (Figma H04): Anfrage des Händlers, Status pflegt das Team von Hand (MVP ohne Paketdienst).
 model MusterSendung {
   id             Int      @id @default(autoincrement())

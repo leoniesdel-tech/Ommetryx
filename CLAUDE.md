@@ -377,3 +377,12 @@ Bis zur Klärung nicht raten.
 - **Entscheidung Leonie (2.11.):** Kleidungsmaße sollen die Deinstallation überdauern, um das System weiterzuentwickeln. Vorschlag: `shop/redact` löscht alles mit Shop-Bezug; die Maße bleiben ohne Shop, Produkt-ID, Titel und Varianten in einem eigenen Archiv (Artikelart, Schnitt, Material, Maße je Größe). Noch offen, ob sie das so will.
 - **Gilt nicht für:** Körpermaße/Rückmeldungen (nur mit Einwilligung 3) und Bestelldaten (Art. 28 Abs. 10, nie für eigene Zwecke).
 - **Anwaltsliste:** Dürfen die Maße nach `shop/redact` anonymisiert bleiben? Klausel dazu in die AGB.
+
+**Etappe 10a (2.11., Tests grün)**
+- `webhooks.compliance.tsx` (HMAC über `authenticate.webhook`, falsche Signatur 401, Inhalt nie loggen), in `shopify.app.toml` als `compliance_topics`. `customers/*` bestätigt nur, weil keine Shopify-Kundinnen verknüpft sind.
+- `app/haendler/shop-loeschung.server.ts`: `shop/redact` entfernt Sitzungen und Shop-Verknüpfungen, setzt `Einwilligung.shop` auf „geloescht“, kopiert vermessene Artikel ohne Shop-Bezug nach `KleidungsArchiv` (Migration `kleidungs_archiv`, nur Monat statt Datum) und löscht den Shop. Mehrfach aufrufbar. Das Kundinnen-Profil bleibt.
+- `app/kundin/pflege.server.ts` + `npm run pflege`: Erinnerung 30 Tage vor Ablauf, Löschung nach 24 Monaten, nie ohne mindestens 30 Tage alte Erinnerung; räumt Codes und Sitzungen auf. Auf dem Server später als täglicher Cron-Job einrichten. Ohne Brevo schlägt der Versand in Produktion fehl, dann wird auch nichts gelöscht.
+- Tests mit dem Pflege-Lauf immer mit echtem Datum: er gilt für die ganze lokale Datenbank.
+- Anwaltsliste ergänzt: Einwilligungsnachweise behalten nach `shop/redact` keinen Shop (Nachweis-Wert prüfen).
+- Echter Webhook von Shopify noch nicht empfangen: `shopify app deploy` ist nicht gelaufen (nichts live), getestet mit selbst signierten Anfragen. Shopify CLI 5.0 ist verfügbar, nicht ohne Prüfung aktualisieren.
+- **Nächster Schritt:** 10b (Rate-Limit, Vorlagen-Reste, Prüfungen).

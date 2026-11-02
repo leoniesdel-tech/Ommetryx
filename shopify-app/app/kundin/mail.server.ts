@@ -22,6 +22,21 @@ export async function sendeLoginCode(email: string, code: string) {
   });
 }
 
+/** Erinnerung vor der Löschung nach 24 Monaten ohne Nutzung. */
+export async function sendeLoeschErinnerung(email: string, termin: Date) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("E-Mail-Versand (Brevo) ist noch nicht eingerichtet");
+  }
+  const datum = termin.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+  await identityDb.entwicklungsMail.create({
+    data: {
+      an: email,
+      betreff: "Ihr Ommetryx-Profil wird bald gelöscht",
+      text: `Sie haben Ihr Ommetryx-Profil lange nicht genutzt. Deshalb löschen wir es am ${datum} mit allen gespeicherten Maßen. Wenn Sie es behalten möchten, melden Sie sich einfach vorher einmal an. Sonst müssen Sie nichts tun.`,
+    },
+  });
+}
+
 export function postfach() {
   return identityDb.entwicklungsMail.findMany({ orderBy: { erstelltAm: "desc" }, take: 20 });
 }

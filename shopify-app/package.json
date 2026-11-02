@@ -25,7 +25,8 @@
     "team:einladen": "tsx scripts/team-einladen.ts",
     "widget:bauen": "node widget/bauen.mjs",
     "widget:beobachten": "node widget/bauen.mjs --beobachten",
-    "db:rechte": "node scripts/db-rechte.mjs"
+    "db:rechte": "node scripts/db-rechte.mjs",
+    "pflege": "tsx scripts/pflege.ts"
   },
   "type": "module",
   "engines": {
