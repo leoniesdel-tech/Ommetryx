@@ -4,6 +4,8 @@ import type { Prisma } from "@prisma/client";
 import db from "../db.server";
 import { MASSFELDER } from "./erfassung";
 import type { Masse } from "./erfassung";
+import { legeFotoAb, loescheFotos } from "./fotoablage.server";
+import type { GeprueftesFoto } from "./fotodatei.server";
 import type { MessDaten } from "./messbuch";
 
 export interface MessFilter {
@@ -39,7 +41,7 @@ export async function ladeMessListe(filter: MessFilter) {
       where: bedingung(filter),
       orderBy: { geaendertAm: "desc" },
       take: JE_SEITE,
-      include: { groessen: { orderBy: { reihenfolge: "asc" }, select: { groesse: true } } },
+      include: { groessen: { orderBy: { reihenfolge: "asc" }, select: { groesse: true, foto: { select: { id: true } } } } },
     }),
     db.messArtikel.count({ where: bedingung(filter) }),
     db.messArtikel.findMany({ distinct: ["onlineShop"], select: { onlineShop: true }, orderBy: { onlineShop: "asc" } }),
@@ -57,7 +59,7 @@ export function ladeMessArtikel(id: number) {
   return db.messArtikel.findUnique({
     where: { id },
     include: {
-      groessen: { orderBy: { reihenfolge: "asc" }, include: { gemessenVon: { select: { name: true } } } },
+      groessen: { orderBy: { reihenfolge: "asc" }, include: { gemessenVon: { select: { name: true } }, foto: true } },
     },
   });
 }
@@ -89,13 +91,16 @@ export async function speichereMessArtikel(id: number | null, d: MessDaten, team
     messhoeheBrustCm: a.messhoeheBrustCm,
   };
 
-  return db.$transaction(async (tx) => {
+  let alteFotos: string[] = [];
+  const neueId = await db.$transaction(async (tx) => {
     const eintrag = id === null ? await tx.messArtikel.create({ data: felder }) : await tx.messArtikel.update({ where: { id }, data: felder });
     const vorhanden = await tx.messGroesse.findMany({ where: { artikelId: eintrag.id } });
     const nachName = new Map(vorhanden.map((g) => [g.groesse, g]));
     const namen = new Set(a.groessen.map((g) => g.groesse));
 
-    await tx.messGroesse.deleteMany({ where: { artikelId: eintrag.id, groesse: { notIn: [...namen] } } });
+    const entfernt = { artikelId: eintrag.id, groesse: { notIn: [...namen] } };
+    alteFotos = (await tx.messFoto.findMany({ where: { groesse: entfernt }, select: { datei: true } })).map((f) => f.datei);
+    await tx.messGroesse.deleteMany({ where: entfernt });
     for (const g of a.groessen) {
       const alt = nachName.get(g.groesse);
       if (alt) {
@@ -110,8 +115,34 @@ export async function speichereMessArtikel(id: number | null, d: MessDaten, team
     }
     return eintrag.id;
   });
+  await loescheFotos(alteFotos);
+  return neueId;
 }
 
 export async function loescheMessArtikel(id: number) {
+  const fotos = await db.messFoto.findMany({ where: { groesse: { artikelId: id } }, select: { datei: true } });
   await db.messArtikel.deleteMany({ where: { id } });
+  await loescheFotos(fotos.map((f) => f.datei));
+}
+
+/** Speichert das Foto einer Größe, ein vorhandenes wird ersetzt. false: Die Größe gehört nicht zu diesem Teil. */
+export async function speichereMessFoto(artikelId: number, groesseId: number, foto: GeprueftesFoto): Promise<boolean> {
+  const groesse = await db.messGroesse.findFirst({ where: { id: groesseId, artikelId }, include: { foto: true } });
+  if (!groesse) return false;
+  const datei = await legeFotoAb(foto.daten, foto.endung);
+  const felder = { datei, typ: foto.typ, bytes: foto.daten.length, breite: foto.breite, hoehe: foto.hoehe, kamera: foto.kamera, hochgeladenAm: new Date() };
+  await db.messFoto.upsert({ where: { groesseId }, create: { groesseId, ...felder }, update: felder });
+  if (groesse.foto) await loescheFotos([groesse.foto.datei]);
+  return true;
+}
+
+export async function loescheMessFoto(artikelId: number, groesseId: number) {
+  const foto = await db.messFoto.findFirst({ where: { groesseId, groesse: { artikelId } } });
+  if (!foto) return;
+  await db.messFoto.delete({ where: { id: foto.id } });
+  await loescheFotos([foto.datei]);
+}
+
+export function ladeMessFoto(groesseId: number) {
+  return db.messFoto.findUnique({ where: { groesseId } });
 }

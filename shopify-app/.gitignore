@@ -16,6 +16,9 @@ database.sqlite
 .env
 .env.*
 
+# Messbuch-Fotos gehören nicht ins Repo
+/daten
+
 
 
 

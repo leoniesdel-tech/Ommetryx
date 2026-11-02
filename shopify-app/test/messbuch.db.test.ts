@@ -1,17 +1,31 @@
 // Messbuch: Prüfung, Speichern, Filter. Erfundene Testdaten, werden danach aufgeräumt.
 
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { standardKonfiguration } from "@ommetryx/empfehlung";
+import type { GeprueftesFoto } from "../app/intern/fotodatei.server";
 import { pruefeMessArtikel } from "../app/intern/messbuch";
 import type { MessDaten } from "../app/intern/messbuch";
-import { ladeMessArtikel, ladeMessListe, loescheMessArtikel, speichereMessArtikel } from "../app/intern/messbuch.server";
+import { ladeMessArtikel, ladeMessFoto, ladeMessListe, loescheMessArtikel, loescheMessFoto, speichereMessArtikel, speichereMessFoto } from "../app/intern/messbuch.server";
 
 const db = new PrismaClient();
 const k = standardKonfiguration();
 const SHOP = "Messbuch-Testshop-Erfunden";
 let teamA = 0;
 let teamB = 0;
+const fotoOrdner = mkdtempSync(path.join(tmpdir(), "ox-fotos-"));
+const dateien = () => readdirSync(fotoOrdner);
+const testFoto = (kamera: string | null = "Erfundenes Handy"): GeprueftesFoto => ({
+  daten: Buffer.from([1, 2, 3]),
+  typ: "image/jpeg",
+  endung: "jpg",
+  breite: 4000,
+  hoehe: 3000,
+  kamera,
+});
 
 function formular(aenderung: Record<string, string> = {}, groessen = [["38", "50"], ["40", "52,5"]]) {
   const f = new FormData();
@@ -42,6 +56,7 @@ function daten(aenderung?: Record<string, string>, groessen?: string[][]): MessD
 }
 
 beforeAll(async () => {
+  process.env.OX_FOTO_ORDNER = fotoOrdner;
   await db.messArtikel.deleteMany({ where: { onlineShop: { startsWith: "Messbuch-Testshop" } } });
   await db.teamMitglied.deleteMany({ where: { email: { endsWith: "@messbuch.test.invalid" } } });
   teamA = (await db.teamMitglied.create({ data: { email: "a@messbuch.test.invalid", name: "Erfunden A" } })).id;
@@ -52,6 +67,7 @@ afterAll(async () => {
   await db.messArtikel.deleteMany({ where: { onlineShop: { startsWith: "Messbuch-Testshop" } } });
   await db.teamMitglied.deleteMany({ where: { email: { endsWith: "@messbuch.test.invalid" } } });
   await db.$disconnect();
+  rmSync(fotoOrdner, { recursive: true, force: true });
 });
 
 describe("Prüfung", () => {
@@ -121,6 +137,70 @@ describe("Speichern", () => {
     await loescheMessArtikel(id);
     expect(await ladeMessArtikel(id)).toBeNull();
     expect(await db.messGroesse.count({ where: { artikelId: id } })).toBe(0);
+  });
+});
+
+describe("Fotos", () => {
+  async function teilMitFoto(name: string) {
+    const id = await speichereMessArtikel(null, daten({ produktname: name }), teamA);
+    const groesse = (await ladeMessArtikel(id))!.groessen[0]!;
+    expect(await speichereMessFoto(id, groesse.id, testFoto())).toBe(true);
+    return { id, groesseId: groesse.id };
+  }
+
+  it("speichert Angaben und Datei, Ersetzen entfernt die alte Datei", async () => {
+    const { groesseId, id } = await teilMitFoto("Foto-Ersetzen");
+    const alt = (await ladeMessFoto(groesseId))!;
+    expect(alt.kamera).toBe("Erfundenes Handy");
+    expect(existsSync(path.join(fotoOrdner, alt.datei))).toBe(true);
+
+    await speichereMessFoto(id, groesseId, testFoto(null));
+    const neu = (await ladeMessFoto(groesseId))!;
+    expect(neu.datei).not.toBe(alt.datei);
+    expect(neu.kamera).toBeNull();
+    expect(existsSync(path.join(fotoOrdner, alt.datei))).toBe(false);
+    expect(existsSync(path.join(fotoOrdner, neu.datei))).toBe(true);
+  });
+
+  it("nimmt kein Foto für die Größe eines anderen Teils an", async () => {
+    const eins = await teilMitFoto("Foto-Fremd-Eins");
+    const zwei = await teilMitFoto("Foto-Fremd-Zwei");
+    const vorher = dateien().length;
+    expect(await speichereMessFoto(eins.id, zwei.groesseId, testFoto())).toBe(false);
+    await loescheMessFoto(eins.id, zwei.groesseId);
+    expect(await ladeMessFoto(zwei.groesseId)).not.toBeNull();
+    expect(dateien()).toHaveLength(vorher);
+  });
+
+  it("Löschen entfernt Eintrag und Datei", async () => {
+    const { id, groesseId } = await teilMitFoto("Foto-Löschen");
+    const { datei } = (await ladeMessFoto(groesseId))!;
+    await loescheMessFoto(id, groesseId);
+    expect(await ladeMessFoto(groesseId)).toBeNull();
+    expect(existsSync(path.join(fotoOrdner, datei))).toBe(false);
+  });
+
+  it("eine entfernte Größe nimmt ihre Datei mit, Maß-Änderungen lassen das Foto stehen", async () => {
+    const { id, groesseId } = await teilMitFoto("Foto-Größe");
+    const { datei } = (await ladeMessFoto(groesseId))!;
+    await speichereMessArtikel(id, daten({ produktname: "Foto-Größe" }, [["38", "51"], ["40", "53"]]), teamA);
+    expect((await ladeMessFoto(groesseId))?.datei).toBe(datei);
+    await speichereMessArtikel(id, daten({ produktname: "Foto-Größe" }, [["40", "53"]]), teamA);
+    expect(await ladeMessFoto(groesseId)).toBeNull();
+    expect(existsSync(path.join(fotoOrdner, datei))).toBe(false);
+  });
+
+  it("ein gelöschtes Teil nimmt seine Dateien mit", async () => {
+    const { id, groesseId } = await teilMitFoto("Foto-Teil-Löschen");
+    const { datei } = (await ladeMessFoto(groesseId))!;
+    await loescheMessArtikel(id);
+    expect(existsSync(path.join(fotoOrdner, datei))).toBe(false);
+  });
+
+  it("die Liste zeigt, welche Größen ein Foto haben", async () => {
+    await teilMitFoto("Foto-Liste");
+    const { artikel } = await ladeMessListe({ suche: "Foto-Liste" });
+    expect(artikel[0]!.groessen.map((g) => Boolean(g.foto))).toEqual([true, false]);
   });
 });
 

@@ -9,6 +9,8 @@ import type { GeprüfterArtikel } from "./erfassung";
 export const HERKUNFT = { eigen: "Selbst gekauft", haendler: "Händler-Muster" } as const;
 export type Herkunft = keyof typeof HERKUNFT;
 
+export const MAX_FOTO_MB = 25;
+
 export interface MessDaten {
   herkunft: Herkunft;
   onlineShop: string;

@@ -281,10 +281,31 @@ model MessGroesse {
 
   artikel     MessArtikel   @relation(fields: [artikelId], references: [id], onDelete: Cascade)
   gemessenVon TeamMitglied? @relation(fields: [gemessenVonId], references: [id], onDelete: SetNull)
+  foto        MessFoto?
 
   @@unique([artikelId, groesse])
   @@index([groesse])
   @@map("mess_groesse")
+  @@schema("app")
+}
+
+/// Ein Foto je Größe, von vorne. Die Datei liegt in der Foto-Ablage, hier stehen nur ihre Angaben.
+model MessFoto {
+  id            Int      @id @default(autoincrement())
+  groesseId     Int      @unique @map("groesse_id")
+  /// Zufälliger Dateiname in der Foto-Ablage
+  datei         String
+  typ           String
+  bytes         Int
+  breite        Int
+  hoehe         Int
+  /// Handy-Modell aus den Bilddaten, falls vorhanden
+  kamera        String?
+  hochgeladenAm DateTime @default(now()) @map("hochgeladen_am")
+
+  groesse MessGroesse @relation(fields: [groesseId], references: [id], onDelete: Cascade)
+
+  @@map("mess_foto")
   @@schema("app")
 }
 

@@ -23,6 +23,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return { ...liste, filter, kategorieName };
 };
 
+const fotoStand = (fehlen: number) => (fehlen === 0 ? "Alle Fotos da" : fehlen === 1 ? "1 Foto fehlt" : `${fehlen} Fotos fehlen`);
+
 export default function Messbuch() {
   const { artikel, gesamt, optionen, filter, kategorieName } = useLoaderData<typeof loader>();
   const senden = useSubmit();
@@ -101,6 +103,7 @@ export default function Messbuch() {
                 <span className="erklaerung">
                   {kategorieName[a.kategorie] ?? a.kategorie} · {HERKUNFT[a.herkunft as Herkunft] ?? a.herkunft} · Größen: {a.groessen.map((g) => g.groesse).join(", ")}
                 </span>
+                <span className="erklaerung">{fotoStand(a.groessen.filter((g) => !g.foto).length)}</span>
               </Link>
             </li>
           ))}
