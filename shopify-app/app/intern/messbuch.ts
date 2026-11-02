@@ -16,6 +16,9 @@ export interface MessDaten {
   produktname: string;
   link: string | null;
   notiz: string | null;
+  /** Querdehnung in %, im Messbuch freiwillig. */
+  dehnung: number | null;
+  material: string;
   artikel: GeprüfterArtikel;
 }
 
@@ -25,6 +28,9 @@ const text = (form: FormData, name: string) => String(form.get(name) ?? "").trim
 
 export function pruefeMessArtikel(form: FormData, k: Konfiguration): MessPruefung {
   const eingabe = eingabeAusFormular(form);
+  // Der Dehnungstest entfällt vorerst: Leer ist erlaubt, die Prüfung der Erfassung bekommt dann einen Platzhalter.
+  const dehnung = eingabe.materialDehnungProzent;
+  if (dehnung === null) eingabe.materialDehnungProzent = 0;
   // Für das Messbuch ist die Herkunft egal: Die Meldung der Erfassung nennt Shopify, hier zählt nur „mindestens eine Größe“.
   const pruefung = pruefeErfassung(eingabe, k);
   const fehler: Record<string, string> = pruefung.ok ? {} : { ...pruefung.fehler };
@@ -46,6 +52,10 @@ export function pruefeMessArtikel(form: FormData, k: Konfiguration): MessPruefun
 
   const link = text(form, "link");
   if (link && (!/^https?:\/\/[^\s"'<>]+$/.test(link) || link.length > 500)) fehler.link = "Bitte eine vollständige Adresse mit https:// eintragen.";
+
+  const material = text(form, "material_zusammensetzung");
+  if (!material) fehler.material_zusammensetzung = "Bitte das Material vom Pflegeetikett eintragen.";
+  else if (material.length > 200) fehler.material_zusammensetzung = "Höchstens 200 Zeichen.";
 
   const notiz = text(form, "notiz");
   if (notiz.length > 1000) fehler.notiz = "Höchstens 1000 Zeichen.";
@@ -70,6 +80,8 @@ export function pruefeMessArtikel(form: FormData, k: Konfiguration): MessPruefun
       produktname,
       link: link || null,
       notiz: notiz || null,
+      dehnung,
+      material,
       artikel: { ...pruefung.artikel, groessen: pruefung.artikel.groessen.map((g) => ({ ...g, groesse: g.groesse.trim() })) },
     },
   };

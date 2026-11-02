@@ -152,15 +152,16 @@ export function MessFormular({ vorgabe: v, kategorien, shops, fehler = {}, knopf
             {meldung("schnitt")}
           </div>
           <div className="feld">
-            <label htmlFor="material_dehnung_prozent">Querdehnung in %</label>
-            <input id="material_dehnung_prozent" name="material_dehnung_prozent" inputMode="decimal" defaultValue={v.dehnung} required {...attr("material_dehnung_prozent")} />
-            <span className="erklaerung">10 cm quer markieren, ohne Gewalt dehnen: (gedehnt − 10) × 10.</span>
+            <label htmlFor="material_dehnung_prozent">Querdehnung in % (optional)</label>
+            <input id="material_dehnung_prozent" name="material_dehnung_prozent" inputMode="decimal" defaultValue={v.dehnung} {...attr("material_dehnung_prozent")} />
+            <span className="erklaerung">Vorerst nicht nötig, das Material reicht.</span>
             {meldung("material_dehnung_prozent")}
           </div>
           <div className="feld">
-            <label htmlFor="material_zusammensetzung">Material (optional)</label>
-            <input id="material_zusammensetzung" name="material_zusammensetzung" defaultValue={v.material} />
+            <label htmlFor="material_zusammensetzung">Material</label>
+            <input id="material_zusammensetzung" name="material_zusammensetzung" defaultValue={v.material} required {...attr("material_zusammensetzung")} />
             <span className="erklaerung">Vom Pflegeetikett, z. B. 97 % Baumwolle, 3 % Elastan.</span>
+            {meldung("material_zusammensetzung")}
           </div>
           <div className="feld">
             <label htmlFor="bund_typ">Bund (nur Röcke und Hosen)</label>

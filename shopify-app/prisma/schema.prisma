@@ -245,8 +245,9 @@ model MessArtikel {
   /// Artikelart aus der Konfiguration, z. B. web_oberteil
   kategorie               String
   schnitt                 String
-  materialDehnungProzent  Float    @map("material_dehnung_prozent")
-  materialZusammensetzung String?  @map("material_zusammensetzung")
+  /// Dehnungstest vorerst weggelassen (Entscheidung 2.11.2026), das Material gibt Aufschluss.
+  materialDehnungProzent  Float?   @map("material_dehnung_prozent")
+  materialZusammensetzung String   @map("material_zusammensetzung")
   tailliert               Boolean  @default(false)
   bundTyp                 String?  @map("bund_typ")
   aermelTyp               String?  @map("aermel_typ")

@@ -23,7 +23,7 @@ function formular(aenderung: Record<string, string> = {}, groessen = [["38", "50
     link: "https://shop.example/bluse",
     artikelart: "web_oberteil",
     schnitt: "regulaer",
-    material_dehnung_prozent: "3",
+    material_zusammensetzung: "97 % Baumwolle, 3 % Elastan",
     anzahl_groessen: String(groessen.length),
     ...aenderung,
   };
@@ -72,6 +72,15 @@ describe("Prüfung", () => {
     if (!p.ok) expect(Object.keys(p.fehler)).toEqual(expect.arrayContaining(["link", "g1_groesse"]));
   });
 
+  it("Dehnung ist freiwillig, das Material Pflicht", () => {
+    expect(daten().dehnung).toBeNull();
+    expect(daten({ material_dehnung_prozent: "15" }).dehnung).toBe(15);
+    const p = pruefeMessArtikel(formular({ material_zusammensetzung: " " }), k);
+    expect(p.ok).toBe(false);
+    if (!p.ok) expect(Object.keys(p.fehler)).toEqual(["material_zusammensetzung"]);
+    expect(pruefeMessArtikel(formular({ material_dehnung_prozent: "viel" }), k).ok).toBe(false);
+  });
+
   it("nutzt die Plausibilität der Erfassung", () => {
     const p = pruefeMessArtikel(formular({}, [["38", "500"]]), k);
     expect(p.ok).toBe(false);
@@ -82,6 +91,8 @@ describe("Speichern", () => {
   it("legt an und zeigt, wer gemessen hat", async () => {
     const id = await speichereMessArtikel(null, daten(), teamA);
     const a = await ladeMessArtikel(id);
+    expect(a?.materialDehnungProzent).toBeNull();
+    expect(a?.materialZusammensetzung).toBe("97 % Baumwolle, 3 % Elastan");
     expect(a?.groessen.map((g) => [g.groesse, g.brust, g.gemessenVon?.name])).toEqual([
       ["38", 100, "Erfunden A"],
       ["40", 105, "Erfunden A"],

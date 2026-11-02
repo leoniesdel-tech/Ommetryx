@@ -35,7 +35,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     kategorie: a.kategorie,
     schnitt: a.schnitt,
     dehnung: komma(a.materialDehnungProzent),
-    material: a.materialZusammensetzung ?? "",
+    material: a.materialZusammensetzung,
     tailliert: a.tailliert,
     bundTyp: a.bundTyp ?? "",
     aermelTyp: a.aermelTyp ?? "",
