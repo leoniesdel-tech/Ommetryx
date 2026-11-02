@@ -350,7 +350,7 @@ class Widget {
           if (status === 200) this.profil = profil;
         }
         const inhalt = koerper ? { koerper } : { token: this.token };
-        return this.post<Ergebnis>("empfehlung", { produkt: this.einstellungen!.produkt, passform: this.passform, ...inhalt }, signal);
+        return this.post<Ergebnis>("empfehlung", { produkt: this.einstellungen!.produkt, passform: this.passform, neu: true, ...inhalt }, signal);
       })();
 
       await warte(etappe);
@@ -1169,6 +1169,9 @@ class Widget {
     const einstieg = this.einstellungen?.einstieg;
     const empfohlen = r.status === "empfohlen" && ziel.groesse === r.recommended_size;
     const passform = passformWort(this.passform);
+    // Nur ein Zähler ohne Inhalt. keepalive, weil die Seite gleich neu laden kann.
+    const proxy = this.einstellungen?.proxy;
+    if (proxy) void fetch(`${proxy}/ereignis`, { method: "POST", credentials: "same-origin", keepalive: true }).catch(() => undefined);
     this.schliessen();
 
     const status = einstieg?.querySelector<HTMLElement>("[data-ox-status]");

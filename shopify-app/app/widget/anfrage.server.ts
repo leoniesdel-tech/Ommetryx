@@ -13,6 +13,7 @@ import { ladeProfil } from "../kundin/profil.server";
 import { ladeArtikel } from "../models/artikel.server";
 import { aktiveKonfiguration } from "../models/konfiguration.server";
 import { ladeEinstellungen } from "../haendler/einstellungen.server";
+import { zaehleNutzung } from "../haendler/nutzung.server";
 
 const mass = z.number().finite().min(30).max(250);
 
@@ -30,6 +31,8 @@ export const empfehlungsAnfrage = z
       })
       .optional(),
     token: z.string().optional(),
+    /** Neue Berechnung (nicht der Passform-Umschalter im Ergebnis), nur für den Nutzungszähler. */
+    neu: z.boolean().optional(),
   })
   .refine((a) => a.koerper || a.token);
 
@@ -54,6 +57,7 @@ export async function artikelInfo(shop: string, produkt: string | null) {
   if (!artikel || artikel.status !== "vermessen") return antwort({ vermessen: false });
   const [k, einstellungen] = await Promise.all([aktiveKonfiguration(), ladeEinstellungen(shop)]);
   const art = k.artikelart(artikel.artikelart);
+  await zaehleNutzung(shop, "widget_geoeffnet");
   const taillePflicht = art.primaermass === "huefte" && Boolean(art.messpunkte.taille) && artikel.bundTyp !== "gummizug";
   return antwort({
     vermessen: true,
@@ -71,7 +75,7 @@ export async function empfehlung(shop: string, roh: unknown) {
   const anfrage = empfehlungsAnfrage.safeParse(roh);
   if (!anfrage.success) return antwort({ fehler: "ungueltige_eingabe" }, 400);
 
-  const { produkt, passform, token } = anfrage.data;
+  const { produkt, passform, token, neu } = anfrage.data;
   let koerper = anfrage.data.koerper;
   if (!koerper) {
     const kundin = await kundinAusToken(token, shop);
@@ -91,6 +95,7 @@ export async function empfehlung(shop: string, roh: unknown) {
     if (fehler instanceof EmpfehlungsFehler) return antwort({ fehler: fehler.code }, 422);
     throw fehler;
   }
+  if (neu) await zaehleNutzung(shop, "empfehlung_berechnet");
   return antwort(
     widgetErgebnis(ergebnis, {
       passform,

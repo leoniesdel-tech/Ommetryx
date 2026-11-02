@@ -10,16 +10,18 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 // Wichtig: Was die Seiten-Komponente braucht, darf nicht aus einer .server-Datei kommen.
 import { einrichtungsSchritte } from "../haendler/einrichtung";
+import { MINDESTGRUPPE, NUTZUNG_ARTEN, NUTZUNG_TEXT, ZEITRAUM_TAGE, fuerAnzeige } from "../haendler/nutzung";
+import { ladeNutzung } from "../haendler/nutzung.server";
 import { bestaetigeAvv, ladeEinrichtung, setzeAusgeblendet, setzePositionGeprueft } from "../haendler/einrichtung.server";
 import { AVV, BLOCK_HANDLE, EXTENSION_HANDLE } from "../haendler/texte";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const einrichtung = await ladeEinrichtung(admin, session.shop);
+  const [einrichtung, summen] = await Promise.all([ladeEinrichtung(admin, session.shop), ladeNutzung(session.shop)]);
   const apiKey = process.env.SHOPIFY_API_KEY ?? "";
   // Offizieller Direktlink: öffnet den Theme-Editor auf der Produktseite und setzt unseren Block in den Hauptbereich.
   const themeEditor = `shopify://admin/themes/current/editor?template=product&addAppBlockId=${apiKey}/${BLOCK_HANDLE}&target=mainSection`;
-  return { einrichtung, themeEditor, shopUrl: `https://${session.shop}` };
+  return { einrichtung, nutzung: fuerAnzeige(summen), themeEditor, shopUrl: `https://${session.shop}` };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -84,7 +86,7 @@ const TITEL: Record<SchrittId, string> = {
 };
 
 export default function Startseite() {
-  const { einrichtung: e, themeEditor, shopUrl } = useLoaderData<typeof loader>();
+  const { einrichtung: e, nutzung, themeEditor, shopUrl } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const { aktiv: widgetAktiv, neuPruefen } = useWidgetAktiv();
   const [zustimmung, setZustimmung] = useState(false);
@@ -260,10 +262,22 @@ export default function Startseite() {
       </s-section>
 
       <s-section heading="Nutzung und Retouren">
-        <s-paragraph color="subdued">
-          Noch keine Daten. Sobald genug Kundinnen und Kunden das Widget genutzt haben, sehen Sie hier Nutzung, übernommene Empfehlungen und
-          Retouren mit und ohne Ommetryx – immer zusammengefasst, nie einzelne Personen.
-        </s-paragraph>
+        {NUTZUNG_ARTEN.some((a) => nutzung[a] !== null) ? (
+          <s-stack gap="small-200">
+            <s-text color="subdued">Letzte {ZEITRAUM_TAGE} Tage</s-text>
+            {NUTZUNG_ARTEN.map((a) => (
+              <s-text key={a}>
+                {NUTZUNG_TEXT[a]}: {nutzung[a] === null ? `unter ${MINDESTGRUPPE}` : nutzung[a]!.toLocaleString("de-DE")}
+              </s-text>
+            ))}
+            <s-paragraph color="subdued">Immer zusammengefasst, nie einzelne Personen. Retouren mit und ohne Ommetryx folgen.</s-paragraph>
+          </s-stack>
+        ) : (
+          <s-paragraph color="subdued">
+            Noch keine Daten. Sobald genug Kundinnen und Kunden das Widget genutzt haben, sehen Sie hier die Nutzung – immer zusammengefasst, nie
+            einzelne Personen. Retouren mit und ohne Ommetryx folgen.
+          </s-paragraph>
+        )}
       </s-section>
     </s-page>
   );

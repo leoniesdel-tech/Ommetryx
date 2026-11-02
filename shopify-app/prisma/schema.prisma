@@ -189,8 +189,24 @@ model Shop {
   artikel         Artikel[]
   produktWuensche ProduktWunsch[]
   musterSendungen MusterSendung[]
+  nutzungTage     NutzungTag[]
 
   @@map("shop")
+  @@schema("app")
+}
+
+/// Nutzungszahlen je Shop und Tag (Figma H02). Nur Anzahlen: keine Kennung, keine Maße.
+model NutzungTag {
+  shopId Int      @map("shop_id")
+  tag    DateTime @db.Date
+  /// widget_geoeffnet, empfehlung_berechnet, groesse_uebernommen
+  art    String
+  anzahl Int      @default(0)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@id([shopId, tag, art])
+  @@map("nutzung_tag")
   @@schema("app")
 }
 

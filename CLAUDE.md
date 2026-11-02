@@ -401,3 +401,9 @@ Bis zur Klärung nicht raten.
 
 **Regel 5.1.5 (2.11.):** Entwurf der Support-Anfrage liegt in `docs/anfrage-shopify-support-5-1-5.md` (Gründungssemester-Ordner), noch nicht abgeschickt, Leonie schickt selbst.
 - **Anwaltsliste, wichtig:** Rolle von Ommetryx klären. Der AVV sagt „im Auftrag“ (Auftragsverarbeiter, Händler verantwortlich), das shopübergreifende Profil, „Mein Ommetryx“ und das Kleidungs-Archiv sprechen für eine eigene Verantwortlichkeit. Das beeinflusst 5.1.5, AVV-Text und Einwilligungen.
+
+**Etappe 10c (2.11., Tests grün)**
+- Tabelle `NutzungTag` (Shop, Tag, Art, Anzahl; Migration `nutzung_tag`), `app/haendler/nutzung.ts` + `nutzung.server.ts`. Zählstellen: Artikel-Abfrage (`widget_geoeffnet`), neue Berechnung (`neu: true`, nicht der Passform-Umschalter), `proxy.ereignis` (`groesse_uebernommen`, ohne Inhalt, Signatur, begrenzt). Fehler beim Zählen stören die Beratung nicht.
+- Startseite zeigt die letzten 30 Tage, Werte unter der Mindestgruppe 20 als „unter 20“. Mit echten Zahlen noch nicht im Admin gesehen.
+- Anwaltsliste: Zähler ohne Einwilligung bestätigen lassen.
+- **Nächster Schritt:** 10d Abo-Seite, braucht Preise (nur USD) und Zugang zur Partner-API. Parallel: 5.1.5 und Rolle von Ommetryx klären, Du-Texte gegenlesen.

@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loader as artikelLoader } from "../app/routes/proxy.artikel";
 import { action as empfehlungAction } from "../app/routes/proxy.empfehlung";
+import { action as ereignisAction } from "../app/routes/proxy.ereignis";
 
 const db = new PrismaClient();
 const SHOP = "proxy-test.myshopify.com";
@@ -175,5 +176,38 @@ describe("AVV-Sperre (Figma H09)", () => {
     } finally {
       await db.shop.update({ where: { domain: SHOP }, data: { avvBestaetigtAm: new Date() } });
     }
+  });
+});
+
+describe("Nutzungszähler", () => {
+  const anzahl = async (art: string) =>
+    (await db.nutzungTag.aggregate({ where: { shop: { domain: SHOP }, art }, _sum: { anzahl: true } }))._sum.anzahl ?? 0;
+  const koerper = { koerpergroesse: 168, brust: 96, huefte: 102 };
+  const rechne = (extra: object) => empfehlungAction(aufrufArgs(post(signierteUrl("/proxy/empfehlung"), { produkt: PRODUKT, passform: "regulaer", koerper, ...extra })));
+
+  it("zählt neue Berechnungen, aber nicht den Passform-Umschalter", async () => {
+    const vorher = await anzahl("empfehlung_berechnet");
+    await rechne({ neu: true });
+    await rechne({});
+    expect(await anzahl("empfehlung_berechnet")).toBe(vorher + 1);
+  });
+
+  it("zählt das Öffnen und „Größe übernommen“", async () => {
+    const offen = await anzahl("widget_geoeffnet");
+    await artikelLoader(aufrufArgs(new Request(signierteUrl("/proxy/artikel", { produkt: PRODUKT }))));
+    expect(await anzahl("widget_geoeffnet")).toBe(offen + 1);
+    const antwort = await ereignisAction(aufrufArgs(post(signierteUrl("/proxy/ereignis"), {})));
+    expect(antwort.status).toBe(200);
+    expect(await anzahl("groesse_uebernommen")).toBe(1);
+  });
+
+  it("speichert nur Art und Anzahl, keine Maße", async () => {
+    const [zeile] = await db.nutzungTag.findMany({ where: { shop: { domain: SHOP } } });
+    expect(Object.keys(zeile!).sort()).toEqual(["anzahl", "art", "shopId", "tag"]);
+  });
+
+  it("lehnt eine falsche Signatur ab", async () => {
+    const anfrage = post(signierteUrl("/proxy/ereignis", {}, "falsches-geheimnis"), {});
+    expect(await status(() => ereignisAction(aufrufArgs(anfrage)))).toBeGreaterThanOrEqual(400);
   });
 });
